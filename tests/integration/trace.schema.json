@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rex Trace Schema (Scaffold)",
+  "type": "object",
+  "required": ["traceId", "sessionId", "file", "generatedAt", "actionCount", "duration", "haiku", "actions", "diagnostics"],
+  "properties": {
+    "traceId": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "file": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "actionCount": { "type": "integer", "minimum": 0 },
+    "duration": { "type": "integer", "minimum": 0 },
+    "haiku": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "kind", "riskLevel", "capability", "xriskDecision", "timestamp", "duration", "haiku", "loc"],
+        "properties": {
+          "action": { "type": "string" },
+          "kind": { "type": "string" },
+          "riskLevel": { "type": "string" },
+          "capability": { "type": "string" },
+          "target": {},
+          "xriskDecision": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "duration": { "type": "integer", "minimum": 0 },
+          "haiku": { "type": "string" },
+          "loc": {
+            "type": ["object", "null"],
+            "properties": {
+              "start": {
+                "type": ["object", "null"],
+                "properties": {
+                  "line": { "type": ["integer", "null"] },
+                  "column": { "type": ["integer", "null"] }
+                }
+              },
+              "end": {
+                "type": ["object", "null"],
+                "properties": {
+                  "line": { "type": ["integer", "null"] },
+                  "column": { "type": ["integer", "null"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": ["warnings", "errors"],
+      "properties": {
+        "warnings": { "type": "array" },
+        "errors": { "type": "array" }
+      }
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "version": "0.1.0",
+  "errors": [
+    {
+      "id": "ERR001",
+      "title": "Unknown keyword",
+      "riskIfIgnored": "NONE",
+      "phase": "parser"
+    },
+    {
+      "id": "ERR002",
+      "title": "Variable used before declaration",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR003",
+      "title": "Action statement in observation context",
+      "riskIfIgnored": "HIGH",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR004",
+      "title": "Missing as alias on observe/find/recall",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "parser"
+    },
+    {
+      "id": "ERR005",
+      "title": "use.instead block ambiguous (< 0.60 confidence)",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR006",
+      "title": "RiskBlocked at compile time (known-dangerous pattern)",
+      "riskIfIgnored": "HIGH",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR007",
+      "title": "Dynamic feature isolation contract violation",
+      "riskIfIgnored": "HIGH",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR008",
+      "title": "catch * not last in catch chain",
+      "riskIfIgnored": "LOW",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR009",
+      "title": "parallel with no then handler (strict mode)",
+      "riskIfIgnored": "LOW",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR010",
+      "title": "synthesise called with empty array",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR011",
+      "title": "session used after close",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR012",
+      "title": "recall without prior remember",
+      "riskIfIgnored": "LOW",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR013",
+      "title": "forget with no matching remember",
+      "riskIfIgnored": "LOW",
+      "phase": "semantic"
+    },
+    {
+      "id": "ERR014",
+      "title": "Nested parallel without limit",
+      "riskIfIgnored": "MEDIUM",
+      "phase": "semantic"
+    }
+  ],
+  "warnings": [
+    {
+      "id": "WARN001",
+      "title": "observe without failure handler",
+      "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN002",
+      "title": "navigate without failure handler",
+      "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN003",
+      "title": "use.instead:bash is high risk",
+      "riskIfIgnored": "HIGH"
+    },
+    {
+      "id": "WARN004",
+      "title": "parallel limit not set defaults to Infinity",
+      "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN005",
+      "title": "synthesise confidence not checked",
+      "riskIfIgnored": "LOW"
+    },
+    {
+      "id": "WARN006",
+      "title": "use.instead detected with low confidence (0.60-0.80)",
+      "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN007",
+      "title": "$agent accessed in dynamic feature",
+      "riskIfIgnored": "LOW"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@rexscript/compiler",
+  "version": "0.1.0-phase1",
+  "private": true,
+  "type": "module",
+  "description": "Phase 1 compiler scaffolding for RexScript",
+  "dependencies": {
+    "@rexscript/rosetta": "file:../packages/rosetta",
+    "@rexscript/runtime": "file:../packages/runtime",
+    "@rexscript/xrisk": "file:../packages/xrisk"
+  },
+  "scripts": {
+    "phase1:smoke": "node ./scripts/phase1-smoke.js",
+    "rex:check": "node ./scripts/rex-check.js",
+    "rex:compile": "node ./scripts/rex-compile.js",
+    "rex:run": "node ./scripts/rex-run.js",
+    "rex:trace": "node ./scripts/rex-trace.js",
+    "codegen:snapshots": "node ./scripts/codegen-snapshots.js",
+    "codegen:snapshots:update": "node ./scripts/codegen-snapshots.js --update",
+    "integration:run": "bash ../tests/integration/compile-run-trace.sh",
+    "integration:trace-schema": "node ../tests/integration/validate-trace-schema.js ../tests/integration/integration_when_use_instead.trace.json",
+    "integration:runtime-trace-schema": "node ../tests/integration/validate-trace-schema.js ../tests/integration/integration_when_use_instead.runtime.trace.json",
+    "integration:runtime-behavior": "node ../tests/integration/runtime-behavior-check.js",
+    "integration:compiler-policy": "node ../tests/integration/compiler-policy-check.js",
+    "integration:runtime-trace-metadata": "node ../tests/integration/runtime-trace-metadata-check.js",
+    "integration:diagnostic-format": "node ../tests/integration/diagnostic-format-check.js",
+    "integration:dynamic-feature-lifecycle": "bash ../tests/integration/dynamic-feature-lifecycle.sh"
+  }
+}

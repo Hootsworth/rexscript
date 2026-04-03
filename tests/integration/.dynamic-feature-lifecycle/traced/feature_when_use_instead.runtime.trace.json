@@ -1,0 +1,78 @@
+{
+  "traceId": "rex-20260403-0003",
+  "sessionId": "session-1775235958",
+  "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
+  "generatedAt": "2026-04-03T17:05:58.743Z",
+  "actionCount": 3,
+  "duration": 69,
+  "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+  "actions": [
+    {
+      "action": "observe",
+      "kind": "observe",
+      "riskLevel": "LOW",
+      "capability": "NETWORK",
+      "target": "https://example.com/data",
+      "xriskDecision": "ALLOW",
+      "policyReason": null,
+      "timestamp": "2026-04-03T17:05:58.673Z",
+      "duration": 69,
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "result": {
+        "url": "https://example.com/data",
+        "title": "Untitled Page",
+        "content": "",
+        "confidence": 0.45
+      },
+      "loc": {
+        "line": 2,
+        "column": 3
+      }
+    },
+    {
+      "action": "use.instead",
+      "kind": "use.instead",
+      "riskLevel": "LOW",
+      "capability": "FOREIGN_EXEC",
+      "target": "sql",
+      "xriskDecision": "ALLOW",
+      "policyReason": null,
+      "timestamp": "2026-04-03T17:05:58.742Z",
+      "duration": 0,
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "result": {
+        "language": "sql",
+        "executor": "native",
+        "confidence": 0.99,
+        "via": "hint",
+        "outputSummary": {
+          "type": "object",
+          "rowCount": 0
+        }
+      },
+      "loc": {
+        "line": 5,
+        "column": 5
+      }
+    },
+    {
+      "action": "fallback",
+      "kind": "emit",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.743Z",
+      "duration": 0,
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "result": {
+        "action": "fallback"
+      },
+      "loc": null
+    }
+  ],
+  "diagnostics": {
+    "warnings": [],
+    "errors": []
+  }
+}

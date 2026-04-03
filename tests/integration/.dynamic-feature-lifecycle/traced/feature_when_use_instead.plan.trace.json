@@ -1,0 +1,241 @@
+{
+  "traceId": "rex-20260403-0010",
+  "sessionId": "session-0370",
+  "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
+  "generatedAt": "2026-04-03T17:05:58.845Z",
+  "actionCount": 10,
+  "duration": 4270,
+  "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+  "actions": [
+    {
+      "action": "TryCatchStatement",
+      "kind": "TryCatchStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 277,
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "loc": {
+        "start": {
+          "line": 1,
+          "column": 1
+        },
+        "end": {
+          "line": 19,
+          "column": 1
+        }
+      }
+    },
+    {
+      "action": "observe",
+      "kind": "ObserveStatement",
+      "riskLevel": "LOW",
+      "capability": "NETWORK",
+      "target": "\"https://example.com/data\"",
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 303,
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "loc": {
+        "start": {
+          "line": 2,
+          "column": 3
+        },
+        "end": {
+          "line": 2,
+          "column": 46
+        }
+      }
+    },
+    {
+      "action": "WhenStatement",
+      "kind": "WhenStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 307,
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "loc": {
+        "start": {
+          "line": 4,
+          "column": 3
+        },
+        "end": {
+          "line": 15,
+          "column": 3
+        }
+      }
+    },
+    {
+      "action": "use.instead",
+      "kind": "UseInsteadStatement",
+      "riskLevel": "MEDIUM",
+      "capability": "FOREIGN_EXEC",
+      "target": "sql",
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 410,
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "loc": {
+        "start": {
+          "line": 5,
+          "column": 5
+        },
+        "end": {
+          "line": 9,
+          "column": 5
+        }
+      }
+    },
+    {
+      "action": "UseDefaultStatement",
+      "kind": "UseDefaultStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 447,
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "loc": {
+        "start": {
+          "line": 8,
+          "column": 7
+        },
+        "end": {
+          "line": 8,
+          "column": 20
+        }
+      }
+    },
+    {
+      "action": "synthesise",
+      "kind": "SynthesiseStatement",
+      "riskLevel": "MEDIUM",
+      "capability": "MODEL",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 484,
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "loc": {
+        "start": {
+          "line": 11,
+          "column": 5
+        },
+        "end": {
+          "line": 11,
+          "column": 34
+        }
+      }
+    },
+    {
+      "action": "flag",
+      "kind": "FlagStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 455,
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "loc": {
+        "start": {
+          "line": 13,
+          "column": 5
+        },
+        "end": {
+          "line": 13,
+          "column": 19
+        }
+      }
+    },
+    {
+      "action": "SkipStatement",
+      "kind": "SkipStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 492,
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "loc": {
+        "start": {
+          "line": 14,
+          "column": 5
+        },
+        "end": {
+          "line": 14,
+          "column": 5
+        }
+      }
+    },
+    {
+      "action": "emit",
+      "kind": "EmitStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 529,
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "loc": {
+        "start": {
+          "line": 17,
+          "column": 3
+        },
+        "end": {
+          "line": 17,
+          "column": 29
+        }
+      }
+    },
+    {
+      "action": "SkipStatement",
+      "kind": "SkipStatement",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T17:05:58.845Z",
+      "duration": 566,
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "loc": {
+        "start": {
+          "line": 18,
+          "column": 3
+        },
+        "end": {
+          "line": 18,
+          "column": 3
+        }
+      }
+    }
+  ],
+  "diagnostics": {
+    "warnings": [
+      {
+        "severity": "warning",
+        "code": "WARN005",
+        "message": "synthesise confidence not checked after call",
+        "loc": {
+          "start": {
+            "line": 11,
+            "column": 5
+          },
+          "end": {
+            "line": 11,
+            "column": 34
+          }
+        }
+      }
+    ],
+    "errors": []
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "traceId": "rex-20260403-0003",
+  "sessionId": "session-1775235957",
+  "file": ".../tests/fixtures/valid/when_use_instead.rex",
+  "actionCount": 3,
+  "duration": 139,
+  "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+  "actions": [
+    {
+      "action": "observe",
+      "riskLevel": "LOW",
+      "capability": "NETWORK",
+      "xriskDecision": "ALLOW",
+      "loc": { "line": 2, "column": 3 }
+    },
+    {
+      "action": "use.instead",
+      "riskLevel": "LOW",
+      "capability": "FOREIGN_EXEC",
+      "xriskDecision": "ALLOW",
+      "result": {
+        "language": "sql",
+        "executor": "native",
+        "confidence": 0.99,
+        "via": "hint"
+      },
+      "loc": { "line": 5, "column": 5 }
+    }
+  ],
+  "diagnostics": {
+    "warnings": [],
+    "errors": []
+  }
+}

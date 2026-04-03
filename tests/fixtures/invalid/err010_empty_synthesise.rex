@@ -1,0 +1,1 @@
+synthesise [] as $out

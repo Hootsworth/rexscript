@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RexScript v0.1 AST Node Contracts",
+  "type": "object",
+  "version": "0.1.0",
+  "required": ["version", "nodeKinds"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "0.1.0"
+    },
+    "nodeKinds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "category", "fields"],
+        "properties": {
+          "kind": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["Observation", "Decision", "Action", "Control", "Host"]
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "required": { "type": "boolean", "default": true }
+              }
+            }
+          }
+        }
+      },
+      "default": [
+        {
+          "kind": "ObserveStatement",
+          "category": "Observation",
+          "fields": [
+            { "name": "url", "type": "Expression" },
+            { "name": "session", "type": "Identifier", "required": false },
+            { "name": "alias", "type": "Variable" }
+          ]
+        },
+        {
+          "kind": "NavigateStatement",
+          "category": "Action",
+          "fields": [
+            { "name": "direction", "type": "NavigateDirection", "required": false },
+            { "name": "url", "type": "Expression", "required": false },
+            { "name": "session", "type": "Identifier", "required": false },
+            { "name": "headers", "type": "Expression", "required": false }
+          ]
+        },
+        {
+          "kind": "FindStatement",
+          "category": "Observation",
+          "fields": [
+            { "name": "selector", "type": "StringLiteral" },
+            { "name": "source", "type": "Variable" },
+            { "name": "alias", "type": "Variable" }
+          ]
+        },
+        {
+          "kind": "RecallStatement",
+          "category": "Observation",
+          "fields": [
+            { "name": "tags", "type": "StringLiteral[]" },
+            { "name": "threshold", "type": "NumberLiteral", "required": false },
+            { "name": "alias", "type": "Variable" }
+          ]
+        },
+        {
+          "kind": "ParallelStatement",
+          "category": "Action",
+          "fields": [
+            { "name": "limit", "type": "NumberLiteral", "required": false },
+            { "name": "body", "type": "Statement[]" },
+            { "name": "thenHandler", "type": "Expression", "required": false }
+          ]
+        },
+        {
+          "kind": "UseInsteadStatement",
+          "category": "Action",
+          "fields": [
+            { "name": "languageHint", "type": "LanguageHint", "required": false },
+            { "name": "outputAlias", "type": "Variable", "required": false },
+            { "name": "content", "type": "ForeignContent" },
+            { "name": "catches", "type": "CatchClause[]", "required": false }
+          ]
+        },
+        {
+          "kind": "TryCatchStatement",
+          "category": "Control",
+          "fields": [
+            { "name": "body", "type": "Statement[]" },
+            { "name": "catches", "type": "CatchClause[]" }
+          ]
+        },
+        {
+          "kind": "HostJsStatement",
+          "category": "Host",
+          "fields": [
+            { "name": "node", "type": "BabelNode" }
+          ]
+        }
+      ]
+    }
+  }
+}

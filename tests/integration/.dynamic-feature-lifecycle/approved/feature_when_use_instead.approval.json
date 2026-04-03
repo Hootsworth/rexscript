@@ -1,0 +1,6 @@
+{
+  "featureId": "feature_when_use_instead",
+  "status": "approved",
+  "approvedBy": "phase5-integration",
+  "reason": "Lifecycle simulation for release-readiness gate"
+}

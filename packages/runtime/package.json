@@ -1,0 +1,6 @@
+{
+  "name": "@rexscript/runtime",
+  "version": "0.1.0-stub",
+  "type": "module",
+  "main": "index.js"
+}

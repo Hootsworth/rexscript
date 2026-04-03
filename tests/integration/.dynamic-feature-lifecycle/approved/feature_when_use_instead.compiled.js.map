@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/integration/.dynamic-feature-lifecycle/approved/feature_when_use_instead.compiled.js",
+  "sources": [
+    "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex"
+  ],
+  "names": [],
+  "mappings": "",
+  "x_rexStatementMap": [
+    {
+      "generatedStatementIndex": 0,
+      "sourceLine": 1,
+      "sourceColumn": 1,
+      "kind": "TryCatchStatement"
+    }
+  ]
+}

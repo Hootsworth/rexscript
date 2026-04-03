@@ -1,0 +1,121 @@
+{
+  "version": "0.1.0",
+  "valid": [
+    {
+      "file": "valid/basic_observe_find.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/parallel_recall_synthesise.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/when_use_instead.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/recovery_statements.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/when_confidence_condition.rex",
+      "expect": "parse+semantic pass"
+    }
+  ],
+  "invalid": [
+    {
+      "file": "invalid/err001_unknown_keyword.rex",
+      "expectError": "ERR001"
+    },
+    {
+      "file": "invalid/err002_variable_before_declaration.rex",
+      "expectError": "ERR002"
+    },
+    {
+      "file": "invalid/err003_action_in_observation_context.rex",
+      "expectError": "ERR003"
+    },
+    {
+      "file": "invalid/err004_missing_alias.rex",
+      "expectError": "ERR004"
+    },
+    {
+      "file": "invalid/err005_use_instead_ambiguous.rex",
+      "expectError": "ERR005"
+    },
+    {
+      "file": "invalid/err006_risk_blocked_pattern.rex",
+      "expectError": "ERR006"
+    },
+    {
+      "file": "invalid/err006_use_instead_policy_blocked.rex",
+      "expectError": "ERR006",
+      "allowedUseInsteadLanguages": ["sql"]
+    },
+    {
+      "file": "invalid/err007_dynamic_isolation_violation.rex",
+      "expectError": "ERR007",
+      "mode": "dynamic"
+    },
+    {
+      "file": "invalid/err008_catch_star_not_last.rex",
+      "expectError": "ERR008"
+    },
+    {
+      "file": "invalid/err009_parallel_no_then_strict.rex",
+      "expectError": "ERR009",
+      "mode": "strict"
+    },
+    {
+      "file": "invalid/err010_empty_synthesise.rex",
+      "expectError": "ERR010"
+    },
+    {
+      "file": "invalid/err011_session_used_after_close.rex",
+      "expectError": "ERR011"
+    }
+  ],
+  "warnings": [
+    {
+      "file": "warnings/warn001_observe_no_handler.rex",
+      "expectWarning": "WARN001"
+    },
+    {
+      "file": "warnings/warn002_navigate_no_handler.rex",
+      "expectWarning": "WARN002"
+    },
+    {
+      "file": "warnings/warn004_parallel_no_limit.rex",
+      "expectWarning": "WARN004"
+    },
+    {
+      "file": "warnings/warn005_synthesise_confidence_unchecked.rex",
+      "expectWarning": "WARN005"
+    },
+    {
+      "file": "warnings/warn006_use_instead_low_confidence.rex",
+      "expectWarning": "WARN006"
+    },
+    {
+      "file": "warnings/warn003_bash_high_risk.rex",
+      "expectWarning": "WARN003"
+    },
+    {
+      "file": "warnings/warn007_agent_access_dynamic_feature.rex",
+      "expectWarning": "WARN007",
+      "mode": "dynamic"
+    },
+    {
+      "file": "warnings/err012_recall_without_remember.rex",
+      "expectWarning": "ERR012"
+    },
+    {
+      "file": "warnings/err013_forget_without_remember.rex",
+      "expectWarning": "ERR013"
+    },
+    {
+      "file": "warnings/err014_nested_parallel_without_limit.rex",
+      "expectWarning": "ERR014"
+    }
+  ]
+}

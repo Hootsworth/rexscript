@@ -1,0 +1,89 @@
+(* RexScript v0.1 grammar freeze *)
+
+program         ::= statement*
+statement       ::= observe_stmt
+                  | navigate_stmt
+                  | find_stmt
+                  | remember_stmt
+                  | recall_stmt
+                  | forget_stmt
+                  | parallel_stmt
+                  | session_stmt
+                  | use_instead_stmt
+                  | when_stmt
+                  | flag_stmt
+                  | emit_stmt
+                  | synthesise_stmt
+                  | try_catch_stmt
+                  | js_statement
+
+observe_stmt    ::= 'observe' 'page' url_expr ('with' 'session' identifier)? 'as' variable
+navigate_stmt   ::= 'navigate' 'to' url_expr ('with' 'session' identifier)? ('with' headers_obj)?
+                  | 'navigate' 'back'
+                  | 'navigate' 'forward'
+find_stmt       ::= 'find' semantic_selector 'in' variable 'as' variable
+remember_stmt   ::= 'remember' variable 'tagged' tag_list
+recall_stmt     ::= 'recall' 'tagged' tag_list ('where' recall_filter)? 'as' variable
+forget_stmt     ::= 'forget' 'tagged' tag_list
+
+parallel_stmt   ::= 'parallel' ('limit' number)? '{' statement* '}' ('then' (synthesise_expr | handler_fn))?
+session_stmt    ::= 'session' identifier 'with' '{' session_opts '}'
+use_instead_stmt ::= 'use.instead' (':' language_hint)? ('as' variable)? '{' foreign_content '}' catch_block*
+when_stmt       ::= 'when' agent_condition '{' statement* '}' ('otherwise' '{' statement* '}')?
+flag_stmt       ::= 'flag' variable 'as' identifier
+emit_stmt       ::= 'emit' '{' trace_fields '}'
+synthesise_stmt ::= synthesise_expr
+
+try_catch_stmt  ::= 'try' '{' statement* '}' catch_block+
+catch_block     ::= 'catch' failure_type '{' recovery_stmt* '}'
+                  | 'catch' '*' '{' recovery_stmt* '}'
+
+recovery_stmt   ::= 'retry' ('with' retry_opts)?
+                  | 'skip'
+                  | 'flag' variable 'as' identifier
+                  | 'rotate' 'proxy'
+                  | 'use' 'default' expression
+                  | statement
+
+synthesise_expr ::= 'synthesise' '[' variable (',' variable)* ']' ('as' variable)?
+
+agent_condition ::= variable 'is' page_state
+                  | variable 'seems_unreliable'
+                  | variable 'is' 'empty'
+                  | variable 'confidence' comparator number
+                  | js_expression
+
+url_expr        ::= string_literal | variable | template_string
+semantic_selector ::= string_literal
+
+variable        ::= '$' identifier
+identifier      ::= letter (letter | digit | '_')*
+number          ::= digit+
+
+tag_list        ::= string_literal (',' string_literal)*
+recall_filter   ::= 'relevance' comparator number
+comparator      ::= '>' | '<' | '>=' | '<=' | '='
+
+session_opts    ::= session_opt (',' session_opt)*
+session_opt     ::= 'cookies' ':' bool_expr
+                  | 'proxy' ':' string_literal
+                  | 'fingerprint' ':' fingerprint_mode
+                  | 'timeout' ':' number
+fingerprint_mode ::= 'random' | 'stealth' | 'default'
+
+language_hint   ::= 'sql' | 'python' | 'bash' | 'graphql' | 'regex' | 'xpath' | 'yaml' | 'json'
+page_state      ::= 'inaccessible' | 'gated' | 'loaded' | 'empty' | 'blocked' | 'paywalled'
+
+(* Placeholders to be mapped by parser host integration *)
+headers_obj     ::= js_expression
+handler_fn      ::= js_expression
+trace_fields    ::= js_expression
+retry_opts      ::= js_expression
+expression      ::= js_expression
+js_statement    ::= js_expression
+js_expression   ::= '<<host-js-expression>>'
+string_literal  ::= '<<host-string>>'
+template_string ::= '<<host-template-string>>'
+bool_expr       ::= 'true' | 'false' | js_expression
+letter          ::= 'A'..'Z' | 'a'..'z'
+digit           ::= '0'..'9'
