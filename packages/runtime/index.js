@@ -8,6 +8,7 @@ const MAX_MEMORY_ENTRIES = 500;
 const IMPLEMENTED_USE_INSTEAD = new Set(["sql", "regex", "python", "bash", "graphql", "xpath", "json", "yaml"]);
 const PLANNED_USE_INSTEAD = [];
 let __pythonCommand = undefined;
+let __playwrightLoader = undefined;
 
 const PYTHON_RUNNER = [
   "import json, sys",
@@ -143,6 +144,113 @@ async function fetchPage(url, timeoutMs = 15000) {
   }
 }
 
+function browserAdapterPreference() {
+  const raw = String(process.env.REX_RUNTIME_BROWSER_ADAPTER || "auto").trim().toLowerCase();
+  if (raw === "playwright") return "playwright";
+  if (raw === "fetch") return "fetch";
+  return "auto";
+}
+
+function browserAdapterStrict() {
+  return process.env.REX_RUNTIME_BROWSER_ADAPTER_STRICT === "1";
+}
+
+async function loadPlaywrightChromium() {
+  if (process.env.REX_RUNTIME_PLAYWRIGHT_DISABLE === "1") {
+    return null;
+  }
+  if (__playwrightLoader !== undefined) {
+    return __playwrightLoader;
+  }
+  try {
+    const mod = await import("playwright");
+    __playwrightLoader = mod?.chromium || null;
+    return __playwrightLoader;
+  } catch {
+    __playwrightLoader = null;
+    return __playwrightLoader;
+  }
+}
+
+async function ensurePlaywrightSession(session, options = {}) {
+  const chromium = await loadPlaywrightChromium();
+  if (!chromium) {
+    return null;
+  }
+
+  if (!session.__browserState) {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    session.__browserState = {
+      kind: "playwright",
+      browser,
+      context,
+      page
+    };
+  }
+
+  const timeoutMs = Number(options.timeout || 15000);
+  session.__browserState.page.setDefaultNavigationTimeout(timeoutMs);
+  session.__browserState.page.setDefaultTimeout(timeoutMs);
+
+  return session.__browserState;
+}
+
+async function observeViaPlaywright(url, options = {}) {
+  const timeoutMs = Number(options.timeout || 15000);
+  const browserState = options.browserState;
+  const page = browserState.page;
+
+  const response = await page.goto(url, {
+    waitUntil: "domcontentloaded",
+    timeout: timeoutMs
+  });
+
+  const html = await page.content();
+  const status = response?.status?.() ?? 200;
+  const ok = response ? response.ok() : true;
+  const headers = response?.headers?.() || {};
+
+  return {
+    status,
+    ok,
+    finalUrl: page.url() || url,
+    headers,
+    html
+  };
+}
+
+function resolveObserveAdapter(session) {
+  const pref = browserAdapterPreference();
+  if (pref === "fetch") {
+    return "fetch";
+  }
+  if (pref === "playwright") {
+    return "playwright";
+  }
+  if (session) {
+    return "playwright";
+  }
+  return "fetch";
+}
+
+async function cleanupTransientBrowserState(browserState) {
+  if (!browserState) {
+    return;
+  }
+  try {
+    await browserState.context?.close?.();
+  } catch {
+    // no-op
+  }
+  try {
+    await browserState.browser?.close?.();
+  } catch {
+    // no-op
+  }
+}
+
 function resolveSessionRef(sessionOpt) {
   if (!sessionOpt) {
     return null;
@@ -154,6 +262,24 @@ function resolveSessionRef(sessionOpt) {
     return __sessions.get(sessionOpt.id) || sessionOpt;
   }
   return null;
+}
+
+async function closeSessionBrowserState(session) {
+  const state = session?.__browserState;
+  if (!state) {
+    return;
+  }
+  try {
+    await state.context?.close?.();
+  } catch {
+    // no-op
+  }
+  try {
+    await state.browser?.close?.();
+  } catch {
+    // no-op
+  }
+  delete session.__browserState;
 }
 
 function makeRuntimeError(name, message) {
@@ -172,7 +298,7 @@ function ensureSessionOpen(session, actionName) {
   }
 }
 
-function buildPage({ url, html, status = 200, ok = true, sessionId = null, headers = {}, error = null }) {
+function buildPage({ url, html, status = 200, ok = true, sessionId = null, headers = {}, error = null, adapter = "fetch" }) {
   const title = extractTitle(html);
   const content = stripTags(html).slice(0, 10000);
   const links = extractLinks(html, url);
@@ -200,6 +326,7 @@ function buildPage({ url, html, status = 200, ok = true, sessionId = null, heade
     metadata: {
       status,
       ok,
+      adapter,
       headers,
       contentLength: content.length,
       fetchedAt: nowIso(),
@@ -868,56 +995,142 @@ const runtime = {
     const session = resolveSessionRef(options.session);
     ensureSessionOpen(session, "observe");
     const sessionId = session?.id || null;
+    const selectedAdapter = resolveObserveAdapter(session);
+    const strictAdapter = browserAdapterStrict();
+    let adapterUsed = "fetch";
+    let transientBrowserState = null;
 
     try {
-      const response = await fetchPage(target, Number(options.timeout || 15000));
+      let response;
+      if (selectedAdapter === "playwright") {
+        const owner = session || {
+          id: `transient-${Date.now()}`,
+          history: []
+        };
+        const browserState = await ensurePlaywrightSession(owner, options);
+        if (browserState) {
+          response = await observeViaPlaywright(target, {
+            ...options,
+            browserState
+          });
+          adapterUsed = "playwright";
+          if (!session) {
+            transientBrowserState = browserState;
+          }
+        } else if (strictAdapter || selectedAdapter === "playwright") {
+          if (strictAdapter) {
+            throw makeRuntimeError("BrowserAdapterUnavailable", "Playwright adapter requested but playwright is not installed");
+          }
+          response = await fetchPage(target, Number(options.timeout || 15000));
+          adapterUsed = "fetch-fallback-playwright-unavailable";
+        }
+      }
+
+      if (!response) {
+        response = await fetchPage(target, Number(options.timeout || 15000));
+        adapterUsed = "fetch";
+      }
+
       if (session) {
         session.history.push({ url: response.finalUrl, timestamp: nowIso(), action: "observe" });
       }
+
       return buildPage({
         url: response.finalUrl,
         html: response.html,
         status: response.status,
         ok: response.ok,
         sessionId,
-        headers: response.headers
+        headers: response.headers,
+        adapter: adapterUsed
       });
     } catch (err) {
+      if (strictAdapter && selectedAdapter === "playwright") {
+        throw err;
+      }
       return buildPage({
         url: target,
         html: "",
         status: 0,
         ok: false,
         sessionId,
-        error: String(err?.message || err)
+        error: String(err?.message || err),
+        adapter: adapterUsed
       });
+    } finally {
+      await cleanupTransientBrowserState(transientBrowserState);
     }
+  },
+
+  async hunt(url, options = {}) {
+    const page = await runtime.observe(url, options);
+    if (page && page.trace) {
+      page.trace.action = "hunt";
+    }
+    return page;
   },
 
   async navigate(url, options = {}) {
     const session = resolveSessionRef(options.session);
     ensureSessionOpen(session, "navigate");
+    const strictAdapter = browserAdapterStrict();
+    let adapter = "fetch";
+
+    if (session && resolveObserveAdapter(session) === "playwright") {
+      const browserState = await ensurePlaywrightSession(session, options);
+      if (browserState) {
+        await browserState.page.goto(url, {
+          waitUntil: "domcontentloaded",
+          timeout: Number(options.timeout || 15000)
+        });
+        adapter = "playwright";
+      } else {
+        if (strictAdapter) {
+          throw makeRuntimeError("BrowserAdapterUnavailable", "Playwright adapter requested but playwright is not installed");
+        }
+        adapter = "fetch-fallback-playwright-unavailable";
+      }
+    }
+
     if (session) {
       session.currentUrl = url;
       session.history.push({ url, timestamp: nowIso(), action: "navigate" });
     }
-    return { ok: true, url, sessionId: session?.id || null };
+    return { ok: true, url, sessionId: session?.id || null, adapter };
   },
 
   async navigateBack(options = {}) {
     const session = resolveSessionRef(options.session);
     ensureSessionOpen(session, "navigateBack");
+    let adapter = "fetch";
+    if (session && session.__browserState?.page) {
+      await session.__browserState.page.goBack({
+        waitUntil: "domcontentloaded",
+        timeout: Number(options.timeout || 15000)
+      }).catch(() => null);
+      session.currentUrl = session.__browserState.page.url() || session.currentUrl;
+      adapter = "playwright";
+    }
     if (session && session.history.length > 1) {
       session.history.pop();
       session.currentUrl = session.history[session.history.length - 1]?.url || null;
     }
-    return { ok: true, direction: "back", url: session?.currentUrl || null, sessionId: session?.id || null };
+    return { ok: true, direction: "back", url: session?.currentUrl || null, sessionId: session?.id || null, adapter };
   },
 
   async navigateForward(options = {}) {
     const session = resolveSessionRef(options.session);
     ensureSessionOpen(session, "navigateForward");
-    return { ok: true, direction: "forward", url: session?.currentUrl || null, sessionId: session?.id || null };
+    let adapter = "fetch";
+    if (session && session.__browserState?.page) {
+      await session.__browserState.page.goForward({
+        waitUntil: "domcontentloaded",
+        timeout: Number(options.timeout || 15000)
+      }).catch(() => null);
+      session.currentUrl = session.__browserState.page.url() || session.currentUrl;
+      adapter = "playwright";
+    }
+    return { ok: true, direction: "forward", url: session?.currentUrl || null, sessionId: session?.id || null, adapter };
   },
 
   async find(selector, source) {
@@ -954,11 +1167,74 @@ const runtime = {
   },
 
   async synthesise(inputs = []) {
+    const normalized = Array.isArray(inputs) ? inputs : [inputs];
+
+    const textParts = normalized
+      .map((item) => {
+        if (item == null) return "";
+        if (typeof item === "string") return item;
+        if (typeof item === "number" || typeof item === "boolean") return String(item);
+        if (typeof item === "object") {
+          if (typeof item.summary === "string") return item.summary;
+          if (typeof item.content === "string") return item.content;
+          if (typeof item.title === "string") return item.title;
+          try {
+            return JSON.stringify(item);
+          } catch {
+            return String(item);
+          }
+        }
+        return String(item);
+      })
+      .map((part) => part.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+
+    const combined = textParts.join(" ").trim();
+    const tokens = combined
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length >= 3);
+
+    const stop = new Set([
+      "the", "and", "for", "with", "that", "this", "from", "into", "when", "where",
+      "are", "was", "were", "have", "has", "had", "then", "than", "there", "their",
+      "about", "after", "before", "while", "will", "would", "could", "should", "into",
+      "your", "you", "our", "its", "they", "them", "which", "what", "who", "whom"
+    ]);
+
+    const frequency = new Map();
+    for (const token of tokens) {
+      if (stop.has(token)) continue;
+      frequency.set(token, (frequency.get(token) || 0) + 1);
+    }
+
+    const keywords = Array.from(frequency.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 8)
+      .map(([word]) => word);
+
+    const trimmed = combined.slice(0, 420);
+    const content = trimmed || `Synthesised ${normalized.length} inputs`;
+    const summary = keywords.length
+      ? `Synthesised ${normalized.length} inputs; key topics: ${keywords.join(", ")}`
+      : `Synthesised ${normalized.length} inputs`;
+
+    const nonEmptyRatio = normalized.length === 0 ? 0 : textParts.length / normalized.length;
+    const densityBoost = Math.min(0.2, (keywords.length / 8) * 0.2);
+    const confidence = Number(Math.min(0.99, 0.5 + nonEmptyRatio * 0.3 + densityBoost).toFixed(2));
+
     return {
-      content: `Synthesised ${inputs.length} inputs`,
-      summary: "Stub synthesis summary",
-      confidence: 0.8,
-      sources: inputs
+      content,
+      summary,
+      confidence,
+      sources: normalized,
+      keywords,
+      stats: {
+        inputCount: normalized.length,
+        nonEmptyInputs: textParts.length,
+        tokenCount: tokens.length
+      }
     };
   },
 
@@ -970,10 +1246,12 @@ const runtime = {
       closed: false,
       currentUrl: null,
       history: [],
+      __browserState: null,
       ...options,
-      close() {
+      async close() {
         this.closed = true;
         this.active = false;
+        await closeSessionBrowserState(this);
       }
     };
     __sessions.set(id, session);

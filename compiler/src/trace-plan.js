@@ -40,7 +40,7 @@ function capabilityForAction(stmt) {
 
 function actionName(stmt) {
   switch (stmt.kind) {
-    case "ObserveStatement": return "observe";
+    case "ObserveStatement": return stmt.verb === "hunt" ? "hunt" : "observe";
     case "NavigateStatement": return "navigate";
     case "FindStatement": return "find";
     case "RememberStatement": return "remember";

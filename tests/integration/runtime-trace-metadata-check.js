@@ -18,6 +18,19 @@ function main() {
     fail("No use.instead action found in runtime trace");
   }
 
+  const observe = trace.actions.find((a) => a.action === "observe" || a.action === "hunt");
+  if (!observe) {
+    fail("No observe/hunt action found in runtime trace");
+  }
+
+  if (!observe.result || typeof observe.result !== "object") {
+    fail("observe/hunt trace result summary missing");
+  }
+
+  if (typeof observe.result.adapter !== "string" || observe.result.adapter.length === 0) {
+    fail("observe/hunt trace result summary missing adapter telemetry");
+  }
+
   if (!useInstead.result || typeof useInstead.result !== "object") {
     fail("use.instead trace result summary missing");
   }

@@ -16,6 +16,7 @@ trace
 agent
 when
 otherwise
+expect
 retry
 skip
 rotate

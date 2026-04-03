@@ -1,7 +1,7 @@
-try {
+expect {
   observe page "https://example.com" as $page
-} catch * {
+} otherwise * {
   skip
-} catch Timeout {
+} otherwise Timeout {
   retry
 }

@@ -20,11 +20,27 @@
     {
       "file": "valid/when_confidence_condition.rex",
       "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/expect_otherwise_flow.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/hunt_alias_flow.rex",
+      "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/host_js_newline_boundaries.rex",
+      "expect": "parse+semantic pass"
     }
   ],
   "invalid": [
     {
       "file": "invalid/err001_unknown_keyword.rex",
+      "expectError": "ERR001"
+    },
+    {
+      "file": "invalid/err001_unknown_catch_failure_type.rex",
       "expectError": "ERR001"
     },
     {

@@ -1,0 +1,87 @@
+{
+  "name": "RexScript",
+  "scopeName": "source.rexscript",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#variables" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.rexscript",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.rexscript",
+          "match": "\\b(expect|otherwise|try|catch|when|parallel|retry|skip|use\\.instead|use|default)\\b"
+        },
+        {
+          "name": "keyword.other.rexscript",
+          "match": "\\b(observe|hunt|navigate|find|remember|recall|forget|session|emit|flag|synthesise|rotate|proxy|tagged|relevance|confidence|seems_unreliable|with|as|limit)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.rexscript",
+          "match": "\\b(loaded|empty|blocked|inaccessible|gated|paywalled|true|false)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.rexscript",
+          "match": "\\$[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.rexscript",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.rexscript", "match": "\\\\." }
+          ]
+        },
+        {
+          "name": "string.quoted.single.rexscript",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "name": "constant.character.escape.rexscript", "match": "\\\\." }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.rexscript",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.rexscript",
+          "match": "(==|!=|<=|>=|<|>|=|\\+|\\-|\\*|/)"
+        }
+      ]
+    }
+  }
+}

@@ -4,14 +4,14 @@ session research with {
   timeout: 30000
 }
 
-try {
+expect {
   observe page "https://example.com" with session research as $page
   find "main article content" in $page as $article
   emit { action: "article_extracted", confidence: $article.confidence }
-} catch Timeout {
+} otherwise Timeout {
   flag $page as timed_out
   skip
-} catch * {
+} otherwise * {
   emit { action: "unhandled_failure" }
   skip
 }

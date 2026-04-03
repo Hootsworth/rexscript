@@ -1,4 +1,4 @@
-try {
+expect {
   observe page "https://example.com/data" as $page
 
   when $page is loaded {
@@ -13,7 +13,7 @@ try {
     flag $page as unavailable
     skip
   }
-} catch * {
+} otherwise * {
   emit { action: "fallback" }
   skip
 }

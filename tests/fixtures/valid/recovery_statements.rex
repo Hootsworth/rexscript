@@ -1,10 +1,10 @@
-try {
+expect {
   observe page "https://example.com" as $page
-} catch BlockedByBot {
+} otherwise BlockedByBot {
   rotate proxy
   retry
-} catch QueryFailed {
+} otherwise QueryFailed {
   use default []
-} catch * {
+} otherwise * {
   skip
 }

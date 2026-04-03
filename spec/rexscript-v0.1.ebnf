@@ -14,7 +14,7 @@ statement       ::= observe_stmt
                   | flag_stmt
                   | emit_stmt
                   | synthesise_stmt
-                  | try_catch_stmt
+                  | expect_otherwise_stmt
                   | js_statement
 
 observe_stmt    ::= 'observe' 'page' url_expr ('with' 'session' identifier)? 'as' variable
@@ -34,9 +34,12 @@ flag_stmt       ::= 'flag' variable 'as' identifier
 emit_stmt       ::= 'emit' '{' trace_fields '}'
 synthesise_stmt ::= synthesise_expr
 
-try_catch_stmt  ::= 'try' '{' statement* '}' catch_block+
-catch_block     ::= 'catch' failure_type '{' recovery_stmt* '}'
-                  | 'catch' '*' '{' recovery_stmt* '}'
+expect_otherwise_stmt ::= 'expect' '{' statement* '}' otherwise_block+
+otherwise_block ::= 'otherwise' failure_type '{' recovery_stmt* '}'
+                  | 'otherwise' '*' '{' recovery_stmt* '}'
+                  | 'otherwise' '{' recovery_stmt* '}'
+
+(* Legacy compatibility accepted by parser: try/catch blocks map to same AST form. *)
 
 recovery_stmt   ::= 'retry' ('with' retry_opts)?
                   | 'skip'

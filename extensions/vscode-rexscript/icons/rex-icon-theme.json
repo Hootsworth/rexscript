@@ -1,0 +1,14 @@
+{
+  "$schema": "vscode://schemas/icon-theme",
+  "iconDefinitions": {
+    "rexscript-file": {
+      "iconPath": "./rexscript-file.svg"
+    }
+  },
+  "fileExtensions": {
+    "rex": "rexscript-file"
+  },
+  "fileNames": {
+    "Rexfile": "rexscript-file"
+  }
+}

@@ -2,7 +2,7 @@
   "traceId": "rex-20260403-0010",
   "sessionId": "session-0370",
   "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
-  "generatedAt": "2026-04-03T17:05:58.845Z",
+  "generatedAt": "2026-04-03T20:16:43.377Z",
   "actionCount": 10,
   "duration": 4270,
   "haiku": "pages drift at dusk / context binds each decision / night remembers all",
@@ -14,7 +14,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.376Z",
       "duration": 277,
       "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "loc": {
@@ -24,7 +24,7 @@
         },
         "end": {
           "line": 19,
-          "column": 1
+          "column": 2
         }
       }
     },
@@ -35,7 +35,7 @@
       "capability": "NETWORK",
       "target": "\"https://example.com/data\"",
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 303,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
@@ -44,8 +44,8 @@
           "column": 3
         },
         "end": {
-          "line": 2,
-          "column": 46
+          "line": 3,
+          "column": 1
         }
       }
     },
@@ -56,7 +56,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 307,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
@@ -66,7 +66,7 @@
         },
         "end": {
           "line": 15,
-          "column": 3
+          "column": 4
         }
       }
     },
@@ -77,7 +77,7 @@
       "capability": "FOREIGN_EXEC",
       "target": "sql",
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 410,
       "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
       "loc": {
@@ -86,8 +86,8 @@
           "column": 5
         },
         "end": {
-          "line": 9,
-          "column": 5
+          "line": 10,
+          "column": 1
         }
       }
     },
@@ -98,7 +98,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 447,
       "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "loc": {
@@ -119,7 +119,7 @@
       "capability": "MODEL",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 484,
       "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
       "loc": {
@@ -129,7 +129,7 @@
         },
         "end": {
           "line": 11,
-          "column": 34
+          "column": 42
         }
       }
     },
@@ -140,7 +140,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 455,
       "haiku": "pages drift at dusk / context binds each decision / night remembers all",
       "loc": {
@@ -150,7 +150,7 @@
         },
         "end": {
           "line": 13,
-          "column": 19
+          "column": 30
         }
       }
     },
@@ -161,7 +161,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 492,
       "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "loc": {
@@ -182,7 +182,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 529,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
@@ -192,7 +192,7 @@
         },
         "end": {
           "line": 17,
-          "column": 29
+          "column": 30
         }
       }
     },
@@ -203,7 +203,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T17:05:58.845Z",
+      "timestamp": "2026-04-03T20:16:43.377Z",
       "duration": 566,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
@@ -231,7 +231,7 @@
           },
           "end": {
             "line": 11,
-            "column": 34
+            "column": 42
           }
         }
       }

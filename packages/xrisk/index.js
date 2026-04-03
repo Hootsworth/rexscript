@@ -45,6 +45,26 @@ function summarizeResult(result) {
   if (typeof result === "number" || typeof result === "boolean") return result;
   if (Array.isArray(result)) return { type: "array", length: result.length };
   if (typeof result === "object") {
+    if (typeof result?.metadata?.adapter === "string") {
+      return {
+        url: result.url ?? null,
+        title: result.title ?? null,
+        confidence: typeof result.confidence === "number" ? result.confidence : null,
+        adapter: result.metadata.adapter,
+        status: typeof result?.metadata?.status === "number" ? result.metadata.status : null,
+        ok: typeof result?.metadata?.ok === "boolean" ? result.metadata.ok : null
+      };
+    }
+
+    if (typeof result?.adapter === "string" && ("url" in result || "direction" in result)) {
+      return {
+        url: result.url ?? null,
+        direction: result.direction ?? null,
+        adapter: result.adapter,
+        ok: typeof result.ok === "boolean" ? result.ok : null
+      };
+    }
+
     if (typeof result.language === "string" && ("executor" in result || "via" in result)) {
       const output = result.output;
       const outputSummary = {
@@ -74,6 +94,14 @@ function summarizeResult(result) {
     return out;
   }
   return String(result);
+}
+
+function summarizeBlockedResult(failure, message) {
+  return {
+    blocked: true,
+    failure: failure || null,
+    message: message || null
+  };
 }
 
 function makeXriskError(name, message) {
@@ -296,7 +324,7 @@ process.on("exit", () => {
 const xrisk = {
   async before(event = {}) {
     const risk = evaluateBeforeRisk(event);
-    __pending.push({
+    const pending = {
       action: event.action || "unknown",
       capability: event.capability || "NONE",
       target: event.target ?? null,
@@ -305,10 +333,27 @@ const xrisk = {
       policyReason: risk.message ?? null,
       startedAt: Date.now(),
       timestamp: nowIso()
-    });
+    };
+
     if (risk.decision === "BLOCK") {
+      __actions.push({
+        action: pending.action,
+        kind: pending.action,
+        riskLevel: event.riskLevel || "LOW",
+        capability: pending.capability,
+        target: pending.target,
+        xriskDecision: "BLOCK",
+        policyReason: risk.message ?? null,
+        timestamp: pending.timestamp,
+        duration: 0,
+        haiku: buildHaiku(`${pending.timestamp.slice(0, 10)}:${pending.action}:blocked:${__actions.length}`),
+        result: summarizeBlockedResult(risk.failure, risk.message),
+        loc: pending.loc ?? null
+      });
       throw makeXriskError(risk.failure, risk.message);
     }
+
+    __pending.push(pending);
     return { decision: risk.decision };
   },
 

@@ -1,0 +1,60 @@
+{
+  "traceId": "rex-20260403-0002",
+  "sessionId": "session-1775241763",
+  "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
+  "generatedAt": "2026-04-03T18:42:43.805Z",
+  "actionCount": 2,
+  "duration": 0,
+  "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+  "actions": [
+    {
+      "action": "observe",
+      "kind": "observe",
+      "riskLevel": "LOW",
+      "capability": "NETWORK",
+      "target": "https://example.com/data",
+      "xriskDecision": "BLOCK",
+      "policyReason": "Capability NETWORK is not allowed",
+      "timestamp": "2026-04-03T18:42:43.805Z",
+      "duration": 0,
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "result": {
+        "blocked": true,
+        "failure": "CapabilityExceeded",
+        "message": "Capability NETWORK is not allowed"
+      },
+      "loc": {
+        "line": 2,
+        "column": 3
+      }
+    },
+    {
+      "action": "fallback",
+      "kind": "emit",
+      "riskLevel": "LOW",
+      "capability": "NONE",
+      "target": null,
+      "xriskDecision": "ALLOW",
+      "timestamp": "2026-04-03T18:42:43.805Z",
+      "duration": 0,
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "result": {
+        "action": "fallback"
+      },
+      "loc": null
+    }
+  ],
+  "diagnostics": {
+    "warnings": [],
+    "errors": [
+      {
+        "severity": "error",
+        "code": "CapabilityExceeded",
+        "message": "Capability NETWORK is not allowed by current token",
+        "action": "observe",
+        "capability": "NETWORK",
+        "timestamp": "2026-04-03T18:42:43.804Z"
+      }
+    ]
+  }
+}

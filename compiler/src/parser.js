@@ -13,19 +13,44 @@ class ParserError extends Error {
 
 class TokenStream {
   constructor(tokens) {
-    this.tokens = tokens.filter((t) => t.type !== "NEWLINE");
+    this.tokens = tokens;
     this.pos = 0;
   }
 
-  eof() {
+  skipNewlines() {
+    while (this.pos < this.tokens.length && this.tokens[this.pos]?.type === "NEWLINE") {
+      this.pos += 1;
+    }
+  }
+
+  eofRaw() {
     return this.pos >= this.tokens.length;
   }
 
-  peek(offset = 0) {
+  eof() {
+    this.skipNewlines();
+    return this.pos >= this.tokens.length;
+  }
+
+  peekRaw(offset = 0) {
     return this.tokens[this.pos + offset] || null;
   }
 
+  peek(offset = 0) {
+    this.skipNewlines();
+    return this.peekRaw(offset);
+  }
+
+  nextRaw() {
+    const token = this.peekRaw();
+    if (token) {
+      this.pos += 1;
+    }
+    return token;
+  }
+
   next() {
+    this.skipNewlines();
     const token = this.peek();
     if (token) {
       this.pos += 1;
@@ -56,6 +81,29 @@ class TokenStream {
     return token;
   }
 }
+
+const REX_STATEMENT_KEYWORDS = new Set([
+  "observe",
+  "hunt",
+  "navigate",
+  "find",
+  "remember",
+  "forget",
+  "recall",
+  "emit",
+  "flag",
+  "session",
+  "parallel",
+  "synthesise",
+  "try",
+  "expect",
+  "when",
+  "use.instead",
+  "skip",
+  "retry",
+  "rotate",
+  "use"
+]);
 
 function withLoc(startToken, node, endToken = startToken) {
   return {
@@ -144,8 +192,8 @@ function parseBlock(stream) {
   return body;
 }
 
-function parseObserve(stream) {
-  const start = stream.consumeValue("observe");
+function parseObserve(stream, verb = "observe") {
+  const start = stream.consumeValue(verb);
   stream.consumeValue("page");
   const url = parseUrlLike(stream);
 
@@ -162,7 +210,85 @@ function parseObserve(stream) {
   stream.next();
   const alias = parseVariable(stream, "ERR004", "observe requires variable alias");
 
-  return withLoc(start, { kind: "ObserveStatement", url, session, alias }, stream.peek(-1));
+  return withLoc(start, { kind: "ObserveStatement", verb, url, session, alias }, stream.peek(-1));
+}
+
+function parseHostJsStatement(stream) {
+  while (!stream.eofRaw() && stream.peekRaw()?.type === "NEWLINE") {
+    stream.nextRaw();
+  }
+
+  const start = stream.peekRaw();
+  if (!start) {
+    return null;
+  }
+
+  const rawTokens = [];
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+
+  while (!stream.eofRaw()) {
+    const token = stream.peekRaw();
+    if (!token) {
+      break;
+    }
+
+    if (token.type === "NEWLINE") {
+      stream.nextRaw();
+      if (parenDepth === 0 && bracketDepth === 0 && braceDepth === 0 && rawTokens.length > 0) {
+        break;
+      }
+      continue;
+    }
+
+    if (token.type === "UNKNOWN") {
+      throw new ParserError("ERR001", `Unknown token '${token.value}'`, token);
+    }
+
+    if (parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      if (rawTokens.length > 0 && token.type === "KEYWORD" && REX_STATEMENT_KEYWORDS.has(token.value)) {
+        break;
+      }
+      if (rawTokens.length > 0 && token.value === "}") {
+        break;
+      }
+    }
+
+    const current = stream.nextRaw();
+    rawTokens.push(current.value);
+
+    if (current.value === "(") {
+      parenDepth += 1;
+      continue;
+    }
+    if (current.value === ")" && parenDepth > 0) {
+      parenDepth -= 1;
+      continue;
+    }
+    if (current.value === "[") {
+      bracketDepth += 1;
+      continue;
+    }
+    if (current.value === "]" && bracketDepth > 0) {
+      bracketDepth -= 1;
+      continue;
+    }
+    if (current.value === "{") {
+      braceDepth += 1;
+      continue;
+    }
+    if (current.value === "}" && braceDepth > 0) {
+      braceDepth -= 1;
+      continue;
+    }
+
+    if (parenDepth === 0 && bracketDepth === 0 && braceDepth === 0 && current.value === ";") {
+      break;
+    }
+  }
+
+  return withLoc(start, { kind: "HostJsStatement", raw: rawTokens.join(" ") }, stream.peekRaw(-1) || start);
 }
 
 function parseNavigate(stream) {
@@ -339,6 +465,22 @@ function parseCatch(stream) {
   return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
 }
 
+function parseOtherwiseClause(stream) {
+  const start = stream.consumeValue("otherwise");
+  let failureType = "*";
+
+  if (!stream.matchValue("{")) {
+    const token = stream.next();
+    if (!token) {
+      throw new ParserError("ERR001", "Expected otherwise failure type or block", token);
+    }
+    failureType = token.value;
+  }
+
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
+}
+
 function parseTryCatch(stream) {
   const start = stream.consumeValue("try");
   const body = parseBlock(stream);
@@ -349,6 +491,22 @@ function parseTryCatch(stream) {
   if (catches.length === 0) {
     throw new ParserError("ERR001", "try must include at least one catch block", stream.peek());
   }
+  return withLoc(start, { kind: "TryCatchStatement", body, catches }, stream.peek(-1));
+}
+
+function parseExpectOtherwise(stream) {
+  const start = stream.consumeValue("expect");
+  const body = parseBlock(stream);
+  const catches = [];
+
+  while (stream.matchValue("otherwise")) {
+    catches.push(parseOtherwiseClause(stream));
+  }
+
+  if (catches.length === 0) {
+    throw new ParserError("ERR001", "expect must include at least one otherwise block", stream.peek());
+  }
+
   return withLoc(start, { kind: "TryCatchStatement", body, catches }, stream.peek(-1));
 }
 
@@ -534,6 +692,8 @@ function parseStatement(stream) {
   switch (token.value) {
     case "observe":
       return parseObserve(stream);
+    case "hunt":
+      return parseObserve(stream, "hunt");
     case "navigate":
       return parseNavigate(stream);
     case "find":
@@ -556,6 +716,8 @@ function parseStatement(stream) {
       return parseSynthesise(stream);
     case "try":
       return parseTryCatch(stream);
+    case "expect":
+      return parseExpectOtherwise(stream);
     case "when":
       return parseWhen(stream);
     case "use.instead":
@@ -569,11 +731,7 @@ function parseStatement(stream) {
     case "use":
       return parseUseDefault(stream);
     default:
-      if (token.type === "UNKNOWN") {
-        throw new ParserError("ERR001", `Unknown token '${token.value}'`, token);
-      }
-      stream.next();
-      return withLoc(token, { kind: "HostJsStatement", raw: token.value }, token);
+      return parseHostJsStatement(stream);
   }
 }
 
@@ -583,7 +741,10 @@ export function parse(source) {
   const body = [];
 
   while (!stream.eof()) {
-    body.push(parseStatement(stream));
+    const statement = parseStatement(stream);
+    if (statement) {
+      body.push(statement);
+    }
   }
 
   return {

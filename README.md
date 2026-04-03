@@ -1,275 +1,257 @@
 # RexScript
 
-RexScript is an agent-centric, risk-governed programming language that transpiles to JavaScript and runs with runtime policy controls, execution traces, and deterministic diagnostics.
-
-This repository provides the compiler pipeline, runtime packages, integration suite, and release-phase scaffolding.
-
-![RexScript Overview](assets/screenshots/01-rexscript-overview.png)
+RexScript is an agent-focused programming language that compiles to JavaScript and executes with policy-aware runtime controls, deterministic diagnostics, and auditable traces.
 
 ## Table Of Contents
 
-- [What RexScript Is](#what-rexscript-is)
-- [Current Implementation Status](#current-implementation-status)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
+- [What You Get](#what-you-get)
+- [Requirements](#requirements)
+- [Install](#install)
 - [Quick Start](#quick-start)
 - [Language Examples](#language-examples)
-- [Compiler And Runtime Commands](#compiler-and-runtime-commands)
-- [Policy And Risk Governance](#policy-and-risk-governance)
-- [Tracing Model](#tracing-model)
-- [Dynamic Feature Lifecycle](#dynamic-feature-lifecycle)
-- [Validation Suite](#validation-suite)
-- [Screenshots And CodeSnap Workflow](#screenshots-and-codesnap-workflow)
-- [Roadmap Docs](#roadmap-docs)
+- [CLI Reference](#cli-reference)
+- [Runtime Policy Controls](#runtime-policy-controls)
+- [Tracing And Audit Artifacts](#tracing-and-audit-artifacts)
+- [Validation Commands](#validation-commands)
+- [Production Readiness Checklist](#production-readiness-checklist)
+- [Repository Layout](#repository-layout)
+- [Troubleshooting](#troubleshooting)
 
-## What RexScript Is
+## What You Get
 
-RexScript is a real language (not just a script collection) because it has:
+- Grammar-defined language and parser contracts
+- Semantic diagnostics with policy gates
+- JS code generation with runtime risk instrumentation
+- Runtime primitives for observe/find/session/memory flows
+- `use.instead` adapters with confidence, policy, and trace metadata
+- Compile-time and runtime trace artifacts suitable for auditing
 
-- A defined grammar: [spec/rexscript-v0.1.ebnf](spec/rexscript-v0.1.ebnf)
-- A parser and AST contracts: [compiler/src/parser.js](compiler/src/parser.js), [compiler/contracts/ast-nodes.json](compiler/contracts/ast-nodes.json)
-- Semantic diagnostics and policy gates: [compiler/src/semantic.js](compiler/src/semantic.js), [compiler/contracts/diagnostics.json](compiler/contracts/diagnostics.json)
-- Code generation targeting JavaScript: [compiler/src/codegen.js](compiler/src/codegen.js)
-- Runtime behavior and risk controls: [packages/runtime/index.js](packages/runtime/index.js), [packages/xrisk/index.js](packages/xrisk/index.js)
+Core implementation paths:
 
-## Current Implementation Status
+- `compiler/src/parser.js`
+- `compiler/src/semantic.js`
+- `compiler/src/codegen.js`
+- `packages/runtime/index.js`
+- `packages/xrisk/index.js`
+- `tests/integration`
 
-- Phase 1: Completed (grammar + AST + diagnostics contracts + fixtures)
-- Phase 2: Completed (compiler core + snapshots + integration pipeline)
-- Phase 3: In progress (runtime fidelity and trace quality)
-- Phase 4: In progress (use.instead adapters and integration hardening)
-- Phase 5: Started (dynamic feature lifecycle + release-readiness gates)
+## Requirements
 
-## Architecture
+- Node.js 20+ (recommended)
+- npm 10+
+- Optional for some adapters:
+  - Python 3 for `use.instead:python`
+  - Playwright runtime for browser adapter mode
 
-Compiler flow:
-
-1. Lexer tokenizes source
-2. Parser emits typed AST nodes
-3. Semantic analyzer enforces language rules and policy checks
-4. Codegen emits JavaScript with embedded XRisk hooks
-5. Runtime executes primitives and emits runtime trace artifacts
-
-Runtime governance flow:
-
-1. `before` risk evaluation (capabilities, prompt/tamper checks, policy allowlists)
-2. Primitive execution (`observe`, `find`, `use.instead`, `parallel`, `synthesise`)
-3. `after` risk evaluation and trace summarization
-4. Trace persistence (`traceId`, `sessionId`, `actions`, `diagnostics`)
-
-![Compiler API](assets/screenshots/05-compiler-api.png)
-![Parser Core](assets/screenshots/06-parser-core.png)
-![Semantic Policy Gates](assets/screenshots/07-semantic-policy-gates.png)
-![Codegen Risk Wrapper](assets/screenshots/08-codegen-risk-wrapper.png)
-
-## Project Structure
-
-Top-level map:
-
-- [compiler](compiler): lexer, parser, semantic analysis, codegen, CLI scripts
-- [packages/runtime](packages/runtime): execution primitives and use.instead adapters
-- [packages/xrisk](packages/xrisk): runtime policy decisions and trace sink
-- [packages/rosetta](packages/rosetta): language scoring/detection helpers
-- [tests/fixtures](tests/fixtures): valid, invalid, warning fixture corpus
-- [tests/integration](tests/integration): integration pipeline and checks
-- [docs](docs): roadmap and phase prep docs
-- [assets](assets): screenshot assets and CodeSnap chunk sources
-
-![Project Structure](assets/screenshots/17-project-structure.png)
-
-## Quick Start
-
-Run from [compiler](compiler):
+## Install
 
 ```bash
 cd rexscript/compiler
 npm install
-
-npm run phase1:smoke
-npm run rex:check -- ../tests/fixtures/valid/when_use_instead.rex
-npm run rex:compile -- ../tests/fixtures/valid/when_use_instead.rex ./.rex-run/quickstart.js default --map
-npm run rex:run -- ../tests/fixtures/valid/when_use_instead.rex default --trace-out ../tests/integration/quickstart.runtime.trace.json
-npm run rex:trace -- ../tests/fixtures/valid/when_use_instead.rex ../tests/integration/quickstart.plan.trace.json default
 ```
 
-![Quick Start CLI](assets/screenshots/02-quickstart-cli.png)
+## Quick Start
+
+```bash
+cd rexscript/compiler
+
+npm run -s rex:check -- ../tests/fixtures/valid/when_use_instead.rex
+npm run -s rex:compile -- ../tests/fixtures/valid/when_use_instead.rex ./.rex-run/quickstart.js default --map
+npm run -s rex:run -- ../tests/fixtures/valid/when_use_instead.rex default --trace-out ../tests/integration/quickstart.runtime.trace.json
+npm run -s rex:trace -- ../tests/fixtures/valid/when_use_instead.rex ../tests/integration/quickstart.plan.trace.json default
+```
 
 ## Language Examples
 
-Basic flow with observation, conditional branch, synthesis, and recovery:
+### Guarded execution with `expect` / `otherwise`
 
 ```rex
-try {
-	observe page "https://example.com/data" as $page
+expect {
+  observe page "https://example.com/data" as $page
 
-	when $page is loaded {
-		find "Latest headlines" in $page as $headlines
-		synthesise [$page, $headlines] as $summary
-	} otherwise {
-		flag $page as unavailable
-		skip
-	}
-} catch * {
-	emit { action: "fallback" }
-	skip
+  when $page is loaded {
+    find "Latest headlines" in $page as $headlines
+    synthesise [$page, $headlines] as $summary
+  } otherwise {
+    flag $page as unavailable
+    skip
+  }
+} otherwise * {
+  emit { action: "fallback" }
+  skip
 }
 ```
 
-`use.instead` with explicit language and fallback:
+### `use.instead` with fallback behavior
 
 ```rex
-try {
-	use.instead:sql as $rows {
-		SELECT id, title FROM posts LIMIT 5
-	} catch QueryFailed {
-		use default []
-	}
+expect {
+  use.instead:sql as $rows {
+    SELECT id, title FROM posts LIMIT 5
+  } catch QueryFailed {
+    use default []
+  }
 
-	synthesise [$rows] as $report
-} catch * {
-	emit { action: "fallback" }
-	skip
+  synthesise [$rows] as $report
+} otherwise * {
+  emit { action: "fallback" }
+  skip
 }
 ```
 
-![Language Basic Flow](assets/screenshots/03-language-basic-flow.png)
-![use.instead Recovery](assets/screenshots/04-use-instead-recovery.png)
+### Session-oriented navigation flow
 
-## Compiler And Runtime Commands
+```rex
+expect {
+  session as $s
+  observe page "https://example.com" with session $s as $home
+  navigate to "https://example.com/docs" with session $s as $docs
+  navigate back with session $s
+  close session $s
+} otherwise * {
+  skip
+}
+```
 
-From [compiler/package.json](compiler/package.json):
+## CLI Reference
 
-### Core
+Run from `rexscript/compiler`.
 
-- `npm run rex:check -- <file.rex> [default|strict|dynamic]`
-- `npm run rex:compile -- <file.rex> [out.js] [default|strict|dynamic] [--map]`
-- `npm run rex:run -- <file.rex> [default|strict|dynamic] [--dry-run] [--trace-out <file.json>]`
-- `npm run rex:trace -- <file.rex> [out.json] [default|strict|dynamic]`
+### Core Commands
 
-### Snapshot/Test
+- `npm run -s rex:check -- <file.rex> [default|strict|dynamic]`
+- `npm run -s rex:compile -- <file.rex> [out.js] [default|strict|dynamic] [--map]`
+- `npm run -s rex:run -- <file.rex> [default|strict|dynamic] [--dry-run] [--trace-out <file.json>]`
+- `npm run -s rex:trace -- <file.rex> [out.json] [default|strict|dynamic]`
 
-- `npm run phase1:smoke`
-- `npm run codegen:snapshots`
-- `npm run codegen:snapshots:update`
+### Key Integration Gates
 
-### Integration
+- `npm run -s integration:phase3`
+- `npm run -s integration:phase-b`
+- `npm run -s integration:phase-d`
+- `npm run -s integration:dynamic-feature-lifecycle`
+- `npm run -s integration:phase5-policy-gate-stress`
+- `npm run -s integration:full-validation`
 
-- `npm run integration:run`
-- `npm run integration:trace-schema`
-- `npm run integration:runtime-trace-schema`
-- `npm run integration:runtime-behavior`
-- `npm run integration:compiler-policy`
-- `npm run integration:runtime-trace-metadata`
-- `npm run integration:diagnostic-format`
-- `npm run integration:dynamic-feature-lifecycle`
+## Runtime Policy Controls
 
-## Policy And Risk Governance
+RexScript runtime behavior is controlled through environment variables.
 
-Compile-time policy checks live in [compiler/src/semantic.js](compiler/src/semantic.js).
-
-Runtime policy checks and trace decisions live in [packages/xrisk/index.js](packages/xrisk/index.js).
-
-Supported runtime policy environment variables:
+### Capability and foreign execution
 
 - `REX_ALLOWED_CAPABILITIES`
 - `REX_ALLOWED_USE_INSTEAD_LANGS`
 - `REX_USE_INSTEAD_STRICT_EXECUTORS`
+
+### Browser adapter behavior
+
+- `REX_RUNTIME_BROWSER_ADAPTER` (`auto`, `playwright`, `fetch`)
+- `REX_RUNTIME_BROWSER_ADAPTER_STRICT`
+- `REX_RUNTIME_PLAYWRIGHT_DISABLE`
+
+### Bash / GraphQL adapter controls
+
 - `REX_BASH_EXECUTOR_ENABLE`
 - `REX_BASH_ALLOWED_COMMANDS`
 - `REX_GRAPHQL_ENDPOINT`
 - `REX_GRAPHQL_ALLOWED_ENDPOINTS`
 - `REX_GRAPHQL_TIMEOUT_MS`
 
-Language adapter support matrix is implemented in [packages/runtime/index.js](packages/runtime/index.js).
+## Tracing And Audit Artifacts
 
-![Runtime Observe/Find](assets/screenshots/09-runtime-observe-find.png)
-![Runtime use.instead Matrix](assets/screenshots/10-runtime-use-instead-matrix.png)
-![XRisk Before/After](assets/screenshots/11-xrisk-before-after.png)
-![Diagnostic Format](assets/screenshots/12-diagnostic-format.png)
-
-## Tracing Model
-
-RexScript generates two distinct trace artifacts:
+RexScript can generate two trace artifacts:
 
 - Plan trace (compiler-side): deterministic action plan
-- Runtime trace (execution-side): real decisions, results, and diagnostics
+- Runtime trace (execution-side): real action outcomes, policy decisions, diagnostics
 
-Trace fields include:
+Typical runtime trace fields:
 
-- `traceId`, `sessionId`, `file`, `generatedAt`
-- `actions[]` with `action`, `riskLevel`, `capability`, `xriskDecision`, `policyReason`, `duration`, `loc`
-- `diagnostics` with warning/error payloads
+- `traceId`, `sessionId`, `generatedAt`
+- `actions[]` with action metadata, risk, policy, duration, location
+- `diagnostics` (warnings, errors)
 
-Relevant files:
+Reference paths:
 
-- [compiler/src/trace-plan.js](compiler/src/trace-plan.js)
-- [tests/integration/trace.schema.json](tests/integration/trace.schema.json)
-- [tests/integration/validate-trace-schema.js](tests/integration/validate-trace-schema.js)
+- `compiler/src/trace-plan.js`
+- `tests/integration/trace.schema.json`
+- `tests/integration/validate-trace-schema.js`
 
-![Trace Plan Builder](assets/screenshots/13-trace-plan-builder.png)
-![Runtime Trace Sample](assets/screenshots/15-runtime-trace-sample.png)
+## Validation Commands
 
-## Dynamic Feature Lifecycle
+Recommended complete verification:
 
-Phase 5 introduced a gated dynamic feature flow:
+```bash
+cd rexscript/compiler
+npm run -s integration:full-validation
+```
 
-1. `pending`: feature source appears in lifecycle workspace
-2. `approved`: approval artifact must exist and be valid
-3. `compiled`: feature compiles under dynamic mode and policy allowlists
-4. `traced`: plan and runtime traces are persisted and validated
-
-Primary script:
-
-- [tests/integration/dynamic-feature-lifecycle.sh](tests/integration/dynamic-feature-lifecycle.sh)
-
-Validator:
-
-- [tests/integration/dynamic-feature-lifecycle-check.js](tests/integration/dynamic-feature-lifecycle-check.js)
-
-![Dynamic Lifecycle Pipeline](assets/screenshots/14-dynamic-lifecycle-pipeline.png)
-
-## Validation Suite
-
-Recommended full run order:
+Expanded explicit chain:
 
 ```bash
 cd rexscript/compiler
 npm run -s phase1:smoke && \
-	npm run -s codegen:snapshots && \
-	npm run -s integration:run && \
-	npm run -s integration:trace-schema && \
-	npm run -s integration:runtime-trace-schema && \
-	npm run -s integration:runtime-behavior && \
-	npm run -s integration:compiler-policy && \
-	npm run -s integration:runtime-trace-metadata && \
-	npm run -s integration:diagnostic-format && \
-	npm run -s integration:dynamic-feature-lifecycle
+  npm run -s codegen:snapshots && \
+  npm run -s integration:phase3 && \
+  npm run -s integration:host-js-boundary && \
+  npm run -s integration:compiler-policy && \
+  npm run -s integration:recovery-sourcemap && \
+  npm run -s integration:rosetta-detection && \
+  npm run -s integration:phase-b && \
+  npm run -s integration:diagnostic-format && \
+  npm run -s integration:phase-d && \
+  npm run -s integration:dynamic-feature-lifecycle && \
+  npm run -s integration:phase5-policy-gate-stress
 ```
 
-![Validation Suite](assets/screenshots/16-validation-suite.png)
+## Production Readiness Checklist
 
-## Screenshots And CodeSnap Workflow
+Use this checklist before shipping:
 
-Everything needed for README screenshots is pre-scaffolded:
+1. Run `integration:full-validation` and ensure zero failures.
+2. Verify policy allowlists for your target environment.
+3. Persist runtime traces and monitor diagnostics.
+4. Lock adapter behavior (`REX_RUNTIME_BROWSER_ADAPTER`) for deterministic runtime behavior.
+5. Restrict `use.instead` language surface to required executors only.
+6. Pin package versions and enforce reproducible build scripts.
+7. Validate dynamic lifecycle gates if using dynamic mode.
 
-- Manifest with exact target names: [assets/screenshot-manifest.md](assets/screenshot-manifest.md)
-- Snippet sources for capture: [assets/code-chunks](assets/code-chunks)
-- Destination folder for final PNG files: [assets/screenshots](assets/screenshots)
+## Repository Layout
 
-Process:
+- `compiler`: lexer/parser/semantic/codegen + CLI scripts
+- `packages/runtime`: runtime primitives and `use.instead` adapters
+- `packages/xrisk`: runtime policy and trace sink
+- `packages/rosetta`: language detection and confidence scoring
+- `tests/fixtures`: valid/invalid/warning fixture corpus
+- `tests/integration`: integration and regression checks
+- `docs`: engineering notes and roadmap docs
 
-1. Open a snippet file from [assets/code-chunks](assets/code-chunks)
-2. Capture with CodeSnap
-3. Save using exact filename from [assets/screenshot-manifest.md](assets/screenshot-manifest.md)
-4. Commit and push
+## Troubleshooting
 
-## Roadmap Docs
+### `BrowserAdapterUnavailable`
 
-- Phase 1 freeze: [docs/phase-1-freeze.md](docs/phase-1-freeze.md)
-- Phase 3 prep: [docs/phase-3-prep.md](docs/phase-3-prep.md)
-- Phase 4 prep: [docs/phase-4-prep.md](docs/phase-4-prep.md)
-- Phase 3-5 roadmap: [docs/phase-3-5-roadmap.md](docs/phase-3-5-roadmap.md)
+- Install Playwright dependencies, or set:
+
+```bash
+export REX_RUNTIME_BROWSER_ADAPTER=fetch
+```
+
+### `ForeignExecutionDenied`
+
+- Review language and capability allowlists:
+
+```bash
+export REX_ALLOWED_USE_INSTEAD_LANGS=sql,regex
+export REX_ALLOWED_CAPABILITIES=NETWORK,FOREIGN_EXEC,NONE
+```
+
+### `MemoryOverflow`
+
+- Ensure memory cleanup where appropriate:
+
+```rex
+forget ["*"]
+```
 
 ---
 
-If you are preparing GitHub launch materials, complete the screenshot set first, then this README is fully publication-ready.
+RexScript is designed for controlled agent execution where auditability, policy compliance, and deterministic runtime behavior are first-class constraints.

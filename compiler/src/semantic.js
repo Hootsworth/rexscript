@@ -2,6 +2,34 @@ function createDiagnostic(severity, code, message, loc = null) {
   return { severity, code, message, loc };
 }
 
+const ALLOWED_FAILURE_TYPES = new Set([
+  "BlockedByBot",
+  "RateLimit",
+  "Timeout",
+  "DNSFailure",
+  "ContentGated",
+  "ContentEmpty",
+  "ContentChanged",
+  "Paywalled",
+  "AmbiguousResult",
+  "MemoryOverflow",
+  "SynthesisFailed",
+  "RiskBlocked",
+  "PromptInjected",
+  "CapabilityExceeded",
+  "QueryFailed",
+  "ForeignLanguageBlocked",
+  "ExecutionTimeout",
+  "ForeignExecutionDenied",
+  "PythonExecutionError",
+  "BashExecutionError",
+  "PatternError",
+  "ForeignRuntimeMissing",
+  "TamperDetected",
+  "SessionClosed",
+  "*"
+]);
+
 function pushDiagnostic(state, severity, code, message, loc) {
   const diagnostic = createDiagnostic(severity, code, message, loc);
   if (severity === "error") {
@@ -109,6 +137,15 @@ function containsActionKeyword(raw) {
 }
 
 function updateSessionCloseTracker(stmt, state) {
+  const raw = String(stmt.raw || "").replace(/\s+/g, "").replace(/;+$/g, "");
+  const closeMatch = raw.match(/^([A-Za-z_][A-Za-z0-9_]*)\.close\(\)$/);
+  if (closeMatch && state.sessions.has(closeMatch[1])) {
+    state.closedSessions.add(closeMatch[1]);
+    state.hostCloseTracker = null;
+    state.lastHostIdentifier = closeMatch[1];
+    return;
+  }
+
   if (typeof stmt.raw === "string" && stmt.raw.endsWith(".close")) {
     const sessionName = stmt.raw.slice(0, -6);
     if (state.sessions.has(sessionName)) {
@@ -151,6 +188,20 @@ function updateSessionCloseTracker(stmt, state) {
 
   if (![".", "close", "(", ")"].includes(stmt.raw)) {
     state.hostCloseTracker = null;
+  }
+}
+
+function validateCatchClauses(catches, state) {
+  for (const clause of catches || []) {
+    if (!ALLOWED_FAILURE_TYPES.has(clause.failureType)) {
+      pushDiagnostic(
+        state,
+        "error",
+        "ERR001",
+        `Unknown failure type '${clause.failureType}' in recovery block`,
+        clause.loc || null
+      );
+    }
   }
 }
 
@@ -270,9 +321,11 @@ function analyzeStatements(statements, state, inTryBody = false) {
     }
 
     if (stmt.kind === "TryCatchStatement") {
+      validateCatchClauses(stmt.catches, state);
+
       const starIndex = stmt.catches.findIndex((c) => c.failureType === "*");
       if (starIndex >= 0 && starIndex !== stmt.catches.length - 1) {
-        pushDiagnostic(state, "error", "ERR008", "catch * must be the last catch block", stmt.loc);
+        pushDiagnostic(state, "error", "ERR008", "fallback * must be the last recovery block", stmt.loc);
       }
 
       analyzeStatements(stmt.body, state, true);
@@ -374,6 +427,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
       if (stmt.outputAlias) {
         state.variables.add(stmt.outputAlias);
       }
+      validateCatchClauses(stmt.catches, state);
       for (const c of stmt.catches || []) {
         analyzeStatements(c.body || [], state, false);
       }

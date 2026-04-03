@@ -1,0 +1,97 @@
+{
+  "name": "rexscript-vscode-support",
+  "displayName": "RexScript Language Support",
+  "description": "RexScript syntax highlighting, file icons, and command palette actions.",
+  "version": "0.1.0",
+  "publisher": "rexscript",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "rexscript",
+        "aliases": [
+          "RexScript",
+          "rexscript"
+        ],
+        "extensions": [
+          ".rex"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/rexscript-file.svg",
+          "dark": "./icons/rexscript-file.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rexscript",
+        "scopeName": "source.rexscript",
+        "path": "./syntaxes/rexscript.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "rexscript.openMenu",
+        "title": "Open RexScript Command Menu",
+        "category": "RexScript"
+      },
+      {
+        "command": "rexscript.check",
+        "title": "Check Current RexScript File",
+        "category": "RexScript"
+      },
+      {
+        "command": "rexscript.compile",
+        "title": "Compile Current RexScript File",
+        "category": "RexScript"
+      },
+      {
+        "command": "rexscript.run",
+        "title": "Run Current RexScript File",
+        "category": "RexScript"
+      },
+      {
+        "command": "rexscript.trace",
+        "title": "Trace Current RexScript File",
+        "category": "RexScript"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "rexscript.openMenu"
+        },
+        {
+          "command": "rexscript.check",
+          "when": "resourceExtname == .rex"
+        },
+        {
+          "command": "rexscript.compile",
+          "when": "resourceExtname == .rex"
+        },
+        {
+          "command": "rexscript.run",
+          "when": "resourceExtname == .rex"
+        },
+        {
+          "command": "rexscript.trace",
+          "when": "resourceExtname == .rex"
+        }
+      ]
+    },
+    "iconThemes": [
+      {
+        "id": "rexscript-file-icons",
+        "label": "RexScript File Icons",
+        "path": "./icons/rex-icon-theme.json"
+      }
+    ]
+  }
+}

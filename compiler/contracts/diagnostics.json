@@ -45,7 +45,7 @@
     },
     {
       "id": "ERR008",
-      "title": "catch * not last in catch chain",
+      "title": "fallback * not last in recovery chain",
       "riskIfIgnored": "LOW",
       "phase": "semantic"
     },
