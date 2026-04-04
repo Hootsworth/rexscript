@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RexScript – The Programming Language for Autonomous Agents</title>
+    <meta name="description" content="A type-safe, deterministic, sandboxed execution language natively designed for AI agent primitives.">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Inter:wght@400;500;600;700&display=swap">
+</head>
+<body>
+    <div class="mesh-bg"></div>
+    <nav class="navbar">
+        <div class="logo">
+            <span class="logo-icon">🦖</span>
+            RexScript
+        </div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#docs">Documentation</a>
+            <a href="https://github.com/Hootsworth/rexscript" target="_blank" class="github-btn">GitHub</a>
+        </div>
+    </nav>
+
+    <main class="hero">
+        <div class="badge">v1.0.0 is now Stable</div>
+        <h1 class="hero-title">The Programming Language<br>for <span>Autonomous Agents.</span></h1>
+        <p class="hero-subtitle">RexScript drops the baggage of DOM APIs and NodeJS servers to give you pure, sandboxed semantic primitives built natively around LLMs. Deterministic, safe, and wildly capable.</p>
+        
+        <div class="hero-ctas">
+            <a href="#install" class="btn primary">Start Building</a>
+            <a href="http://localhost:3000" target="_blank" class="btn secondary">Open Web Playground</a>
+        </div>
+
+        <div class="code-showcase">
+            <div class="editor-header">
+                <div class="dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="title">agent.rex</div>
+            </div>
+            <pre><code><span class="keyword">security</span> {
+    sandbox <span class="string">"docker"</span>
+    lockdown <span class="keyword">strict</span>
+}
+
+<span class="keyword">goal</span> <span class="string">"Audit system vulnerabilities"</span> {
+    <span class="keyword">attempt</span> {
+        <span class="keyword">hunt</span> code <span class="string">"src/**/*.js"</span> <span class="keyword">as</span> <span class="variable">$files</span>;
+        <span class="keyword">synthesise</span> [<span class="variable">$files</span>] <span class="keyword">as</span> <span class="variable">$report</span>;
+    } <span class="keyword">recover</span> Timeout {
+        <span class="keyword">telemetry</span> { exporter <span class="string">"console"</span> }
+    }
+}
+</code></pre>
+        </div>
+    </main>
+</body>
+</html>

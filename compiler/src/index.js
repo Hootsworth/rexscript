@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { tokenize, loadKeywords } from "./lexer.js";
+import { tokenize, loadKeywords, loadKeywordsFromString } from "./lexer.js";
 import { parse } from "./parser.js";
 import { analyze } from "./semantic.js";
 import { generate } from "./codegen.js";
@@ -23,6 +23,10 @@ export function analyzeFile(filePath, options = {}) {
 
 export function checkFile(filePath, options = {}) {
   const source = readSource(filePath);
+  return checkString(source, filePath, options);
+}
+
+export function checkString(source, filePath = "snippet.rex", options = {}) {
   const ast = parse(source);
   const diagnostics = analyze(ast, options);
   const merged = [...diagnostics.errors, ...diagnostics.warnings];
@@ -34,6 +38,10 @@ export function checkFile(filePath, options = {}) {
 
 export function compileFile(filePath, options = {}) {
   const source = readSource(filePath);
+  return compileString(source, filePath, options);
+}
+
+export function compileString(source, filePath = "snippet.rex", options = {}) {
   const ast = parse(source);
   const diagnostics = analyze(ast, options);
   if (diagnostics.errors.length > 0) {

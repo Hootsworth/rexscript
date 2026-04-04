@@ -1,6 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+// Abstracted for edge implementations
 
 const CODE_SUGGESTIONS = {
   ERR001: "Check spelling or remove unknown keyword.",
@@ -26,33 +24,34 @@ const CODE_SUGGESTIONS = {
   WARN007: "Avoid $agent access unless dynamic context truly requires it."
 };
 
-let DIAG_RISK_INDEX = null;
-
-function loadRiskIndex() {
-  if (DIAG_RISK_INDEX) {
-    return DIAG_RISK_INDEX;
-  }
-
-  try {
-    const here = path.dirname(fileURLToPath(import.meta.url));
-    const filePath = path.resolve(here, "../contracts/diagnostics.json");
-    const json = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    const out = new Map();
-    for (const entry of [...(json.errors || []), ...(json.warnings || [])]) {
-      if (entry?.id) {
-        out.set(entry.id, String(entry.riskIfIgnored || "UNKNOWN").toUpperCase());
-      }
-    }
-    DIAG_RISK_INDEX = out;
-    return DIAG_RISK_INDEX;
-  } catch {
-    DIAG_RISK_INDEX = new Map();
-    return DIAG_RISK_INDEX;
-  }
-}
+let DIAG_RISK_INDEX = new Map([
+  ["ERR001", "NONE"],
+  ["ERR002", "MEDIUM"],
+  ["ERR003", "HIGH"],
+  ["ERR004", "MEDIUM"],
+  ["ERR005", "MEDIUM"],
+  ["ERR006", "HIGH"],
+  ["ERR007", "HIGH"],
+  ["ERR008", "LOW"],
+  ["ERR009", "LOW"],
+  ["ERR010", "MEDIUM"],
+  ["ERR011", "MEDIUM"],
+  ["ERR012", "LOW"],
+  ["ERR013", "LOW"],
+  ["ERR014", "MEDIUM"],
+  ["ERR015", "UNKNOWN"],
+  ["ERR016", "UNKNOWN"],
+  ["WARN001", "MEDIUM"],
+  ["WARN002", "MEDIUM"],
+  ["WARN003", "HIGH"],
+  ["WARN004", "MEDIUM"],
+  ["WARN005", "LOW"],
+  ["WARN006", "MEDIUM"],
+  ["WARN007", "LOW"]
+]);
 
 function diagnosticRisk(code) {
-  return loadRiskIndex().get(code) || "UNKNOWN";
+  return DIAG_RISK_INDEX.get(code) || "UNKNOWN";
 }
 
 function diagnosticSuggestion(code) {
@@ -98,5 +97,9 @@ export function formatDiagnostics(diags, filePath, source = "") {
 }
 
 export function readSource(filePath) {
-  return fs.readFileSync(filePath, "utf8");
+  if (typeof process !== "undefined" && process.versions && process.versions.node) {
+      const fs = require("node:fs");
+      return fs.readFileSync(filePath, "utf8");
+  }
+  return ""; // In edge, source must be passed as string
 }

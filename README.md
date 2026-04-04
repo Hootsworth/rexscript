@@ -1,7 +1,11 @@
 # RexScript
 
-RexScript is an agent-focused programming language that compiles to JavaScript and executes with policy-aware runtime controls, deterministic diagnostics, and auditable traces.
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0--stable-brightgreen.svg)]()
 
+> "Because autonomous agents don't browse. They hunt."
+
+**RexScript (v1.0.0 Stable)** is the first programming language designed fundamentally for AI agents. It drops DOM APIs and NodeJS servers, replacing standard JavaScript runtime bounds with **semantic primitives designed natively around LLMs.**
 ## Table Of Contents
 
 - [What You Get](#what-you-get)
@@ -19,10 +23,11 @@ RexScript is an agent-focused programming language that compiles to JavaScript a
 
 ## What You Get
 
-- Grammar-defined language and parser contracts
-- Semantic diagnostics with policy gates
-- JS code generation with runtime risk instrumentation
-- Runtime primitives for observe/find/session/memory flows
+- **Edge Compatibility**: Execute Rex lexing serverlessly natively on Cloudflare Workers and Next.js Edge.
+- **VSCode Diagnostics**: Native language server providing static analysis line/column JSON traces.
+- **Web Playground**: Sleek React/Vite-styled testing environment connecting through local web sockets.
+- **Strict Linting Engine**: `npm run rex:lint` transforms low-confidence validation bindings natively into fatal exit traps.
+- **Zero Trust Security Vaults**: Sandbox `docker`/`strict` and `vault("API_KEY")` natively bound securely in memory.
 - `use.instead` adapters with confidence, policy, and trace metadata
 - Compile-time and runtime trace artifacts suitable for auditing
 

@@ -1,11 +1,18 @@
-import fs from "node:fs";
-import path from "node:path";
 import { TOKEN_TYPES, SYMBOLS, createToken } from "./tokens.js";
 
-const KEYWORDS_FILE = path.resolve(process.cwd(), "contracts/reserved-keywords.txt");
+export const REX_KEYWORDS = new Set([
+  "goal", "constraint", "expect", "otherwise", "telemetry", "metric", "span", "trace_id",
+  "synthesise", "hunt", "assess", "evaluate", "use.instead", "system", "workspace",
+  "tool", "equip", "memory", "remember", "forget", "recall", "clear", "parallel",
+  "distributed", "session", "close", "restart", "with", "as", "then", "timeout",
+  "spawn", "send", "receive", "from", "to", "security", "vault", "sandbox", "lockdown", "strict",
+  "fact", "state", "attempt", "recover", "navigate", "submit", "read", "click", "find",
+  "agent", "trace", "trail", "risk", "true", "false", "null", "undefined",
+  "if", "else", "function", "class", "return", "import", "export", "for", "while",
+  "switch", "case", "break", "continue", "throw", "async", "new", "delete", "typeof", "instanceof", "void"
+]);
 
-export function loadKeywords(keywordsPath = KEYWORDS_FILE) {
-  const raw = fs.readFileSync(keywordsPath, "utf8");
+export function loadKeywordsFromString(raw) {
   return new Set(
     raw
       .split(/\r?\n/)
@@ -14,7 +21,17 @@ export function loadKeywords(keywordsPath = KEYWORDS_FILE) {
   );
 }
 
-export function tokenize(source, keywords = loadKeywords()) {
+export function loadKeywords(keywordsPath) {
+  if (typeof process !== "undefined" && process.versions && process.versions.node) {
+      const fs = require("node:fs");
+      const path = require("node:path");
+      const p = keywordsPath || path.resolve(process.cwd(), "contracts/reserved-keywords.txt");
+      return loadKeywordsFromString(fs.readFileSync(p, "utf8"));
+  }
+  return REX_KEYWORDS;
+}
+
+export function tokenize(source, keywords = REX_KEYWORDS) {
   const tokens = [];
   let i = 0;
   let line = 1;
