@@ -95,14 +95,26 @@ const REX_STATEMENT_KEYWORDS = new Set([
   "session",
   "parallel",
   "synthesise",
-  "try",
+  "attempt",
   "expect",
   "when",
   "use.instead",
   "skip",
   "retry",
   "rotate",
-  "use"
+  "use",
+  "goal",
+  "workspace",
+  "rationale",
+  "fact",
+  "state",
+  "assess",
+  "tool",
+  "equip",
+  "telemetry",
+  "spawn",
+  "send",
+  "security"
 ]);
 
 function withLoc(startToken, node, endToken = startToken) {
@@ -356,7 +368,16 @@ function parseRemember(stream) {
   const data = parseVariable(stream);
   stream.consumeValue("tagged");
   const tags = parseStringList(stream);
-  return withLoc(start, { kind: "RememberStatement", data, tags }, stream.peek(-1));
+  
+  let mode = null;
+  if (stream.matchValue("mode")) {
+    stream.next();
+    const modeTok = stream.next();
+    if (!modeTok) throw new ParserError("ERR001", "Expected mode value", stream.peek(-1));
+    mode = modeTok.value;
+  }
+  
+  return withLoc(start, { kind: "RememberStatement", data, tags, mode }, stream.peek(-1));
 }
 
 function parseForget(stream) {
@@ -380,13 +401,21 @@ function parseRecall(stream) {
     threshold = { comparator, amount: Number(amount) };
   }
 
+  let mode = null;
+  if (stream.matchValue("mode")) {
+    stream.next();
+    const modeTok = stream.next();
+    if (!modeTok) throw new ParserError("ERR001", "Expected mode value", stream.peek(-1));
+    mode = modeTok.value;
+  }
+
   if (!stream.matchValue("as")) {
     throw new ParserError("ERR004", "recall requires 'as $alias'", stream.peek() || stream.peek(-1));
   }
   stream.next();
   const alias = parseVariable(stream, "ERR004", "recall requires variable alias");
 
-  return withLoc(start, { kind: "RecallStatement", tags, threshold, alias }, stream.peek(-1));
+  return withLoc(start, { kind: "RecallStatement", tags, threshold, mode, alias }, stream.peek(-1));
 }
 
 function parseEmit(stream) {
@@ -434,6 +463,11 @@ function parseSynthesise(stream) {
 
 function parseParallel(stream) {
   const start = stream.consumeValue("parallel");
+  let distributed = false;
+  if (stream.matchValue("distributed")) {
+    stream.next();
+    distributed = true;
+  }
   let limit = null;
   if (stream.matchValue("limit")) {
     stream.next();
@@ -451,47 +485,92 @@ function parseParallel(stream) {
     }
   }
 
-  return withLoc(start, { kind: "ParallelStatement", limit, body, thenHandler }, stream.peek(-1));
+  return withLoc(start, { kind: "ParallelStatement", distributed, limit, body, thenHandler }, stream.peek(-1));
 }
 
-function parseCatch(stream) {
-  const start = stream.consumeValue("catch");
-  const token = stream.next();
-  if (!token) {
-    throw new ParserError("ERR001", "Expected catch type", token);
+function parseSpawn(stream) {
+  const start = stream.consumeValue("spawn");
+  stream.consumeValue("agent");
+  const token = stream.peek();
+  let agentType;
+  if (token && (token.type === "STRING" || token.type === "IDENTIFIER")) {
+      agentType = stream.next().value;
+  } else {
+      throw new ParserError("ERR001", "Expected agent type", token);
   }
-  const failureType = token.value;
-  const body = parseBlock(stream);
-  return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
+
+  let options = null;
+  if (stream.matchValue("with")) {
+      stream.next();
+      if (stream.peek().type === "VARIABLE") {
+          options = stream.next().value;
+      } else {
+          options = parseBracedRaw(stream);
+      }
+  }
+
+  stream.consumeValue("as");
+  const alias = parseVariable(stream);
+  if (stream.matchValue(";")) stream.next();
+
+  return withLoc(start, { kind: "SpawnStatement", agentType, options, alias }, stream.peek(-1));
 }
 
-function parseOtherwiseClause(stream) {
-  const start = stream.consumeValue("otherwise");
+function parseSend(stream) {
+  const start = stream.consumeValue("send");
+  let data;
+  if (stream.matchValue("{")) {
+     data = parseBracedRaw(stream);
+  } else {
+     data = parseVariable(stream);
+  }
+  stream.consumeValue("to");
+  const target = parseVariable(stream);
+  if (stream.matchValue(";")) stream.next();
+  return withLoc(start, { kind: "SendStatement", data, target }, stream.peek(-1));
+}
+
+function parseRecover(stream) {
+  const start = stream.consumeValue("recover");
+  const token = stream.peek();
   let failureType = "*";
-
-  if (!stream.matchValue("{")) {
-    const token = stream.next();
-    if (!token) {
-      throw new ParserError("ERR001", "Expected otherwise failure type or block", token);
-    }
-    failureType = token.value;
+  if (token && token.value !== "{") {
+    failureType = stream.next().value;
   }
-
   const body = parseBlock(stream);
   return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
 }
 
-function parseTryCatch(stream) {
-  const start = stream.consumeValue("try");
+function parseAttempt(stream) {
+  const start = stream.consumeValue("attempt");
   const body = parseBlock(stream);
+  
+  let upto = null;
+  if (stream.matchValue("upto")) {
+    stream.next();
+    upto = Number(stream.consumeType("NUMBER", "ERR001", "attempt upto must be a number").value);
+  }
+  
+  let timeout = null;
+  if (stream.matchValue("timeout")) {
+    stream.next();
+    const timeNum = stream.consumeType("NUMBER").value;
+    const timeUnit = stream.consumeType("IDENTIFIER").value;
+    timeout = timeNum + timeUnit;
+  }
+
   const catches = [];
-  while (stream.matchValue("catch")) {
-    catches.push(parseCatch(stream));
+  while (stream.matchValue("recover")) {
+    catches.push(parseRecover(stream));
   }
-  if (catches.length === 0) {
-    throw new ParserError("ERR001", "try must include at least one catch block", stream.peek());
+  
+  let ensureBody = null;
+  if (stream.matchValue("ensure")) {
+    stream.next();
+    ensureBody = parseBlock(stream);
   }
-  return withLoc(start, { kind: "TryCatchStatement", body, catches }, stream.peek(-1));
+
+  return withLoc(start, { kind: "AttemptStatement", body, upto, timeout, catches, ensureBody }, stream.peek(-1));
 }
 
 function parseExpectOtherwise(stream) {
@@ -500,7 +579,7 @@ function parseExpectOtherwise(stream) {
   const catches = [];
 
   while (stream.matchValue("otherwise")) {
-    catches.push(parseOtherwiseClause(stream));
+    catches.push(parseRecover(stream)); // using parseRecover since signature matches
   }
 
   if (catches.length === 0) {
@@ -683,6 +762,165 @@ function parseUseInstead(stream) {
   );
 }
 
+function parseVariableDeclaration(stream, declType) {
+  const start = stream.consumeValue(declType);
+  const rawTokens = [];
+  while (!stream.eofRaw()) {
+     const t = stream.peekRaw();
+     if (!t || t.type === "NEWLINE" || t.value === ";") {
+         if (t && t.value === ";") rawTokens.push(stream.nextRaw().value);
+         break;
+     }
+     rawTokens.push(stream.nextRaw().value);
+  }
+  return withLoc(start, { kind: "VariableDeclaration", declType, raw: rawTokens.join(" ") }, stream.peekRaw(-1) || start);
+}
+
+function parseGoal(stream) {
+  const start = stream.consumeValue("goal");
+  const description = stream.consumeType("STRING").value;
+  let constraints = null;
+  if (stream.matchValue("constraint")) {
+    stream.next();
+    stream.consumeValue("{");
+    constraints = {};
+    while (!stream.eof() && !stream.matchValue("}")) {
+      const field = stream.next().value;
+      const op = stream.next().value; // usually '<'
+      if (field === "budget") {
+        constraints.budget = Number(stream.consumeType("NUMBER").value);
+      } else if (field === "timeout") {
+        const num = Number(stream.consumeType("NUMBER").value);
+        let unit = "ms";
+        if (stream.matchValue("s") || stream.matchValue("ms")) {
+          unit = stream.next().value;
+        }
+        constraints.timeoutMs = unit === "s" ? num * 1000 : num;
+      } else {
+        throw new ParserError("ERR001", "Unknown constraint inside goal", stream.peek(-1));
+      }
+    }
+    stream.consumeValue("}");
+  }
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "GoalStatement", description, constraints, body }, stream.peek(-1));
+}
+
+function parseWorkspace(stream) {
+  const start = stream.consumeValue("workspace");
+  const name = stream.consumeType("STRING").value;
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "WorkspaceStatement", name, body }, stream.peek(-1));
+}
+
+function parseRationale(stream) {
+  const start = stream.consumeValue("rationale");
+  const reason = stream.consumeType("STRING").value;
+  if (stream.matchValue(";")) stream.next();
+  return withLoc(start, { kind: "RationaleStatement", reason }, stream.peek(-1));
+}
+
+function parseAssessCase(stream) {
+  const start = stream.consumeValue("case");
+  const condition = stream.consumeType("STRING", "ERR001", "assess case requires a string condition").value;
+  if (stream.matchValue(":")) stream.next();
+  
+  const body = [];
+  while (!stream.eof() && !stream.matchValue("case") && !stream.matchValue("otherwise") && !stream.matchValue("}")) {
+      body.push(parseStatement(stream));
+  }
+  return withLoc(start, { kind: "AssessCase", condition, body }, stream.peek(-1) || start);
+}
+
+function parseAssess(stream) {
+  const start = stream.consumeValue("assess");
+  const target = parseVariable(stream, "ERR001", "assess requires a variable");
+  stream.consumeValue("{");
+  const cases = [];
+  let otherwise = null;
+  
+  while (!stream.eof() && !stream.matchValue("}")) {
+    if (stream.matchValue("case")) {
+      cases.push(parseAssessCase(stream));
+    } else if (stream.matchValue("otherwise")) {
+      stream.next();
+      if (stream.matchValue(":")) stream.next();
+      otherwise = [];
+      while (!stream.eof() && !stream.matchValue("}")) {
+        otherwise.push(parseStatement(stream));
+      }
+    } else {
+      throw new ParserError("ERR001", "Expected case or otherwise inside assess block", stream.peek());
+    }
+  }
+  stream.consumeValue("}");
+  
+  return withLoc(start, { kind: "AssessStatement", target, cases, otherwise }, stream.peek(-1));
+}
+
+function parseTool(stream) {
+  const start = stream.consumeValue("tool");
+  const name = parseIdentifier(stream);
+  stream.consumeValue("(");
+  const params = [];
+  if (!stream.matchValue(")")) {
+    params.push(parseVariable(stream));
+    while (stream.matchValue(",")) {
+      stream.next();
+      params.push(parseVariable(stream));
+    }
+  }
+  stream.consumeValue(")");
+  const body = parseBlock(stream);
+  
+  return withLoc(start, { kind: "ToolDeclaration", name, params, body }, stream.peek(-1));
+}
+
+function parseEquip(stream) {
+  const start = stream.consumeValue("equip");
+  const name = parseIdentifier(stream);
+  if (stream.matchValue(";")) stream.next();
+  return withLoc(start, { kind: "EquipStatement", name }, stream.peek(-1));
+}
+
+function parseSecurity(stream) {
+  const start = stream.consumeValue("security");
+  stream.consumeValue("{");
+  const config = {};
+  while (!stream.eof() && !stream.matchValue("}")) {
+     const field = stream.next().value;
+     if (field === "sandbox") {
+        config.sandbox = stream.consumeType("STRING").value;
+     } else if (field === "lockdown") {
+        config.lockdown = stream.next().value;
+     } else {
+        throw new ParserError("ERR001", `Unknown security field: ${field}`, stream.peek(-1));
+     }
+  }
+  stream.consumeValue("}");
+  return withLoc(start, { kind: "SecurityStatement", config }, stream.peek(-1));
+}
+
+function parseTelemetry(stream) {
+  const start = stream.consumeValue("telemetry");
+  stream.consumeValue("{");
+  const config = {};
+  while (!stream.eof() && !stream.matchValue("}")) {
+     const field = stream.next().value;
+     if (field === "exporter") {
+        config.exporter = stream.consumeType("STRING").value;
+     } else if (field === "endpoint") {
+        config.endpoint = stream.consumeType("STRING").value;
+     } else if (field === "key") {
+        config.key = parseVariable(stream);
+     } else {
+        throw new ParserError("ERR001", "Unknown telemetry field", stream.peek(-1));
+     }
+  }
+  stream.consumeValue("}");
+  return withLoc(start, { kind: "TelemetryStatement", config }, stream.peek(-1));
+}
+
 function parseStatement(stream) {
   const token = stream.peek();
   if (!token) {
@@ -714,8 +952,8 @@ function parseStatement(stream) {
       return parseParallel(stream);
     case "synthesise":
       return parseSynthesise(stream);
-    case "try":
-      return parseTryCatch(stream);
+    case "attempt":
+      return parseAttempt(stream);
     case "expect":
       return parseExpectOtherwise(stream);
     case "when":
@@ -730,6 +968,30 @@ function parseStatement(stream) {
       return parseRotateProxy(stream);
     case "use":
       return parseUseDefault(stream);
+    case "goal":
+      return parseGoal(stream);
+    case "workspace":
+      return parseWorkspace(stream);
+    case "rationale":
+      return parseRationale(stream);
+    case "fact":
+      return parseVariableDeclaration(stream, "fact");
+    case "state":
+      return parseVariableDeclaration(stream, "state");
+    case "assess":
+      return parseAssess(stream);
+    case "tool":
+      return parseTool(stream);
+    case "equip":
+      return parseEquip(stream);
+    case "telemetry":
+      return parseTelemetry(stream);
+    case "spawn":
+      return parseSpawn(stream);
+    case "send":
+      return parseSend(stream);
+    case "security":
+      return parseSecurity(stream);
     default:
       return parseHostJsStatement(stream);
   }

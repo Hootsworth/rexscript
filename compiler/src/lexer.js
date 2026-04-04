@@ -92,7 +92,7 @@ export function tokenize(source, keywords = loadKeywords()) {
       let value = ch;
       i += 1;
       col += 1;
-      while (i < source.length && /[0-9]/.test(source[i])) {
+      while (i < source.length && /[0-9.]/.test(source[i])) {
         value += source[i];
         i += 1;
         col += 1;

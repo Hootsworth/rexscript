@@ -4,8 +4,12 @@ import { compileFile } from "../src/index.js";
 import { ParserError } from "../src/parser.js";
 
 const target = process.argv[2];
-const outArg = process.argv[3] || null;
-const mode = process.argv[4] || "default";
+const secondArg = process.argv[3] || null;
+const thirdArg = process.argv[4] || null;
+const KNOWN_MODES = new Set(["default", "strict", "dynamic"]);
+
+const outArg = secondArg && !KNOWN_MODES.has(secondArg) ? secondArg : null;
+const mode = outArg ? (thirdArg || "default") : (secondArg || "default");
 const withMap = process.argv.includes("--map");
 
 if (!target) {
@@ -16,10 +20,17 @@ if (!target) {
 const filePath = path.resolve(process.cwd(), target);
 const outPath = outArg ? path.resolve(process.cwd(), outArg) : filePath.replace(/\.rex$/i, ".js");
 
+let permittedCapabilities = null;
+const capArg = process.argv.find(a => a.startsWith("--capabilities="));
+if (capArg) {
+  permittedCapabilities = capArg.split("=")[1].split(",").map(s => s.trim());
+}
+
 const options = {
   strict: mode === "strict",
   dynamicFeature: mode === "dynamic",
-  allowedUseInsteadLanguages: process.env.REX_ALLOWED_USE_INSTEAD_LANGS || null
+  allowedUseInsteadLanguages: process.env.REX_ALLOWED_USE_INSTEAD_LANGS || null,
+  permittedCapabilities
 };
 
 try {

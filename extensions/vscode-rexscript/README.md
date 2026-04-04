@@ -27,6 +27,8 @@ Use the Command Palette and search for `RexScript`:
 - `RexScript: Run Current RexScript File`
 - `RexScript: Trace Current RexScript File`
 
+You can also run a `.rex` file directly from the editor title bar using the play button.
+
 The extension looks for a compiler directory at one of these paths in the opened workspace:
 
 - `rexscript/compiler`

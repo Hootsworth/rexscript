@@ -211,7 +211,15 @@ function analyzeStatements(statements, state, inTryBody = false) {
       continue;
     }
 
+    if (stmt.kind === "SecurityStatement") {
+      state.hasSecurityBlock = (stmt.config && stmt.config.sandbox);
+      continue;
+    }
+
     if (stmt.kind === "ObserveStatement") {
+      if (state.options.permittedCapabilities && !state.options.permittedCapabilities.has("NETWORK")) {
+          pushDiagnostic(state, "error", "ERR016", "Capability NETWORK is required but was dropped by compiler configuration", stmt.loc);
+      }
       if (includesSensitivePattern(stmt.url?.value)) {
         pushDiagnostic(
           state,
@@ -320,7 +328,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
       continue;
     }
 
-    if (stmt.kind === "TryCatchStatement") {
+    if (stmt.kind === "TryCatchStatement" || stmt.kind === "AttemptStatement") {
       validateCatchClauses(stmt.catches, state);
 
       const starIndex = stmt.catches.findIndex((c) => c.failureType === "*");
@@ -328,10 +336,42 @@ function analyzeStatements(statements, state, inTryBody = false) {
         pushDiagnostic(state, "error", "ERR008", "fallback * must be the last recovery block", stmt.loc);
       }
 
+      if (stmt.kind === "AttemptStatement" && stmt.upto !== null && stmt.upto <= 0) {
+        pushDiagnostic(state, "error", "ERR015", "attempt upto must be strictly positive", stmt.loc);
+      }
+
       analyzeStatements(stmt.body, state, true);
       for (const c of stmt.catches) {
         analyzeStatements(c.body || [], state, false);
       }
+      if (stmt.ensureBody) {
+        analyzeStatements(stmt.ensureBody, state, false);
+      }
+      continue;
+    }
+
+    if (stmt.kind === "VariableDeclaration") {
+      const matches = stmt.raw.match(/\$[A-Za-z0-9_]+/g);
+      if (matches) {
+          for (const m of matches) state.variables.add(m);
+      }
+      continue;
+    }
+
+    if (stmt.kind === "GoalStatement" || stmt.kind === "WorkspaceStatement") {
+      if (stmt.kind === "GoalStatement" && stmt.constraints) {
+        if (stmt.constraints.budget !== undefined && stmt.constraints.budget <= 0) {
+           pushDiagnostic(state, "error", "ERR015", "Goal budget must be positive", stmt.loc);
+        }
+        if (stmt.constraints.timeoutMs !== undefined && stmt.constraints.timeoutMs <= 0) {
+           pushDiagnostic(state, "error", "ERR015", "Goal timeout must be positive", stmt.loc);
+        }
+      }
+      analyzeStatements(stmt.body || [], state, false);
+      continue;
+    }
+
+    if (stmt.kind === "RationaleStatement") {
       continue;
     }
 
@@ -358,6 +398,12 @@ function analyzeStatements(statements, state, inTryBody = false) {
     }
 
     if (stmt.kind === "UseInsteadStatement") {
+      if (state.options.permittedCapabilities && !state.options.permittedCapabilities.has("FOREIGN_EXEC")) {
+          pushDiagnostic(state, "error", "ERR016", "Capability FOREIGN_EXEC is required but was dropped by compiler configuration", stmt.loc);
+      }
+      if (!state.hasSecurityBlock) {
+          pushDiagnostic(state, "warning", "WARN020", "Executing use.instead without a configured security sandbox", stmt.loc);
+      }
       if (includesSensitivePattern(stmt.content)) {
         pushDiagnostic(
           state,
@@ -452,6 +498,58 @@ function analyzeStatements(statements, state, inTryBody = false) {
       continue;
     }
 
+    if (stmt.kind === "AssessStatement") {
+      if (!state.variables.has(stmt.target)) {
+        pushDiagnostic(state, "error", "ERR002", `Variable ${stmt.target} used before declaration`, stmt.loc);
+      }
+      for (const c of stmt.cases || []) {
+        analyzeStatements(c.body || [], state, false);
+      }
+      if (stmt.otherwise) {
+        analyzeStatements(stmt.otherwise, state, false);
+      }
+      continue;
+    }
+
+    if (stmt.kind === "ToolDeclaration") {
+      const preParams = new Set(state.variables);
+      for (const p of stmt.params || []) {
+        state.variables.add(p);
+      }
+      analyzeStatements(stmt.body || [], state, false);
+      state.variables = preParams;
+      state.tools.add(stmt.name);
+      continue;
+    }
+
+    if (stmt.kind === "EquipStatement") {
+      if (!state.tools.has(stmt.name)) {
+        pushDiagnostic(state, "warning", "WARN008", `Equipping tool ${stmt.name} which was not declared`, stmt.loc);
+      }
+      continue;
+    }
+
+    if (stmt.kind === "TelemetryStatement") {
+      if (stmt.config.key && stmt.config.key.startsWith("$")) {
+        if (!state.variables.has(stmt.config.key)) {
+          pushDiagnostic(state, "error", "ERR002", `Variable ${stmt.config.key} used before declaration in telemetry`, stmt.loc);
+        }
+      }
+      continue;
+    }
+
+    if (stmt.kind === "SpawnStatement") {
+      state.variables.add(stmt.alias);
+      continue;
+    }
+
+    if (stmt.kind === "SendStatement") {
+      if (!state.variables.has(stmt.target)) {
+        pushDiagnostic(state, "error", "ERR002", `Target ${stmt.target} used before declaration in send statement`, stmt.loc);
+      }
+      continue;
+    }
+
     if (stmt.kind === "SessionStatement") {
       state.sessions.add(stmt.name);
       continue;
@@ -470,6 +568,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
 export function analyze(ast, options = {}) {
   const state = {
     variables: new Set(["$agent", "$session", "$trace", "$memory", "$risk", "$trail"]),
+    tools: new Set(),
     sessions: new Set(),
     closedSessions: new Set(),
     tagsRemembered: new Set(),
@@ -482,8 +581,10 @@ export function analyze(ast, options = {}) {
     options: {
       strict: Boolean(options.strict),
       dynamicFeature: Boolean(options.dynamicFeature),
-      allowedUseInsteadLanguages: normalizeAllowedUseInsteadLanguages(options.allowedUseInsteadLanguages)
-    }
+      allowedUseInsteadLanguages: normalizeAllowedUseInsteadLanguages(options.allowedUseInsteadLanguages),
+      permittedCapabilities: options.permittedCapabilities ? new Set(options.permittedCapabilities) : null
+    },
+    hasSecurityBlock: false
   };
 
   analyzeStatements(ast.body || [], state, false);

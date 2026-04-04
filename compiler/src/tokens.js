@@ -26,7 +26,8 @@ export const SYMBOLS = new Set([
   "*",
   "+",
   "-",
-  "/"
+  "/",
+  "|"
 ]);
 
 export function createToken(type, value, line, column) {

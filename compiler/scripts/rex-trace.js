@@ -5,8 +5,12 @@ import { buildTracePlan } from "../src/trace-plan.js";
 import { ParserError } from "../src/parser.js";
 
 const target = process.argv[2];
-const outArg = process.argv[3] || null;
-const mode = process.argv[4] || "default";
+const secondArg = process.argv[3] || null;
+const thirdArg = process.argv[4] || null;
+const KNOWN_MODES = new Set(["default", "strict", "dynamic"]);
+
+const outArg = secondArg && !KNOWN_MODES.has(secondArg) ? secondArg : null;
+const mode = outArg ? (thirdArg || "default") : (secondArg || "default");
 
 if (!target) {
   console.error("Usage: node scripts/rex-trace.js <file.rex> [out.json] [default|strict|dynamic]");

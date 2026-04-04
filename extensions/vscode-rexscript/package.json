@@ -4,6 +4,11 @@
   "description": "RexScript syntax highlighting, file icons, and command palette actions.",
   "version": "0.1.0",
   "publisher": "rexscript",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hootsworth/rexscript"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -55,6 +60,7 @@
       {
         "command": "rexscript.run",
         "title": "Run Current RexScript File",
+        "icon": "$(play)",
         "category": "RexScript"
       },
       {
@@ -64,6 +70,19 @@
       }
     ],
     "menus": {
+      "editor/title": [
+        {
+          "command": "rexscript.run",
+          "when": "resourceExtname == .rex",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "rexscript.run",
+          "when": "resourceExtname == .rex"
+        }
+      ],
       "commandPalette": [
         {
           "command": "rexscript.openMenu"

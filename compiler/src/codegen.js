@@ -181,19 +181,26 @@ function emitStatement(ctx, stmt, indent = "") {
       return emitRiskWrapped(ctx, indent, meta, `__rex.find(${stmt.selector}, ${sourceExpr})`, stmt.alias);
     }
 
-    case "RememberStatement":
-      return emitRiskWrapped(ctx, indent, meta, `__rex.remember(${stmt.data}, [${(stmt.tags || []).join(", ")}])`, null);
+    case "RememberStatement": {
+      const optionsObj = [];
+      if (stmt.mode) optionsObj.push(`mode: "${stmt.mode}"`);
+      const optStr = optionsObj.length > 0 ? `, { ${optionsObj.join(", ")} }` : "";
+      return emitRiskWrapped(ctx, indent, meta, `__rex.remember(${stmt.data}, [${(stmt.tags || []).join(", ")}]${optStr})`, null);
+    }
 
     case "ForgetStatement":
       return emitRiskWrapped(ctx, indent, meta, `__rex.forget([${(stmt.tags || []).join(", ")}])`, null);
 
     case "RecallStatement": {
-      const options = stmt.threshold ? `, { threshold: ${stmt.threshold.amount} }` : "";
+      const optionsObj = [];
+      if (stmt.threshold) optionsObj.push(`threshold: ${stmt.threshold.amount}`);
+      if (stmt.mode) optionsObj.push(`mode: "${stmt.mode}"`);
+      const optStr = optionsObj.length > 0 ? `, { ${optionsObj.join(", ")} }` : "";
       return emitRiskWrapped(
         ctx,
         indent,
         meta,
-        `__rex.recall([${(stmt.tags || []).join(", ")}]${options})`,
+        `__rex.recall([${(stmt.tags || []).join(", ")}]${optStr})`,
         stmt.alias
       );
     }
@@ -270,11 +277,155 @@ function emitStatement(ctx, stmt, indent = "") {
 
       const thenCode = stmt.thenHandler ? `\n${emitStatement(ctx, stmt.thenHandler, indent)}` : "";
 
-      return `${preDecl}${indent}const ${parallelVar} = await __rex.parallel([\n${tasks}\n${indent}], { limit: ${stmt.limit ?? "Infinity"} });${assignSwitch ? `\n${assignSwitch}` : ""}${thenCode}`;
+      const opts = [];
+      if (stmt.limit) opts.push(`limit: ${stmt.limit}`);
+      if (stmt.distributed) opts.push(`distributed: true`);
+      const optsArg = opts.length ? `, { ${opts.join(", ")} }` : "";
+
+      return `${preDecl}${indent}const ${parallelVar} = await __rex.parallel([\n${tasks}\n${indent}]${optsArg});${assignSwitch ? `\n${assignSwitch}` : ""}${thenCode}`;
     }
 
-    case "HostJsStatement":
-      return `${indent}${stmt.raw};`;
+    case "AttemptStatement": {
+      const tryIndent = stmt.upto ? `${indent}  ` : indent;
+      const body = (stmt.body || []).map((s) => emitStatement(ctx, s, `${tryIndent}  `)).join("\n");
+      const catches = emitCatchBody(ctx, stmt.catches || [], `${tryIndent}  `);
+      
+      let attemptBlock = `${tryIndent}try {\n${body}`;
+      if (stmt.upto) attemptBlock += `\n${tryIndent}  break;`;
+      attemptBlock += `\n${tryIndent}} catch (err) {\n${catches}\n${tryIndent}}`;
+      
+      let loopBlock = attemptBlock;
+      if (stmt.upto) {
+        const attemptTemp = nextTemp(ctx, "attempt");
+        loopBlock = `${indent}let ${attemptTemp} = 0;\n${indent}while (${attemptTemp} < ${stmt.upto}) {\n${indent}  ${attemptTemp}++;\n${attemptBlock}\n${indent}}`;
+      }
+      
+      if (stmt.ensureBody) {
+         const ensureCode = stmt.ensureBody.map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+         const indentedLoop = loopBlock.split('\n').map((l) => l ? '  ' + l : l).join('\n');
+         return `${indent}try {\n${indentedLoop}\n${indent}} finally {\n${ensureCode}\n${indent}}`;
+      }
+      return loopBlock;
+    }
+
+    case "VariableDeclaration": {
+      const jsDeclType = stmt.declType === "fact" ? "const" : "let";
+      let rawHost = stmt.raw || "";
+      if (rawHost.endsWith(";")) {
+        rawHost = rawHost.slice(0, -1).trim();
+      }
+      const receiveRegex = /receive\s+from\s+(\$[A-Za-z0-9_]+)/g;
+      if (receiveRegex.test(rawHost)) {
+        rawHost = rawHost.replace(receiveRegex, "await __rex.receive($1)");
+      }
+      const vaultRegex = /vault\("([^"]+)"\)/g;
+      if (vaultRegex.test(rawHost)) {
+        rawHost = rawHost.replace(vaultRegex, "await __xrisk.vault(\"$1\")");
+      }
+      if (rawHost.includes(" | ")) {
+         const assignParts = rawHost.split("=");
+         if (assignParts.length === 2 && assignParts[1].includes(" | ")) {
+           const parts = assignParts[1].split(" | ").map((x) => x.trim());
+           rawHost = `${assignParts[0].trim()} = __rex.pipe(${parts.join(", ")})`;
+         }
+      }
+      return `${indent}${jsDeclType} ${rawHost};`;
+    }
+
+    case "GoalStatement": {
+      const goalBody = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+      const loc = stmt.loc ? JSON.stringify(stmt.loc.start) : "null";
+      const constraintsStr = stmt.constraints ? JSON.stringify(stmt.constraints) : "null";
+      return `${indent}await __xrisk.goalStart(${JSON.stringify(stmt.description)}, ${constraintsStr}, ${loc});\n${indent}try {\n${goalBody}\n${indent}} finally {\n${indent}  await __xrisk.goalEnd();\n${indent}}`;
+    }
+
+    case "WorkspaceStatement": {
+      const wsBody = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+      return `${indent}await __rex.workspaceStart(${JSON.stringify(stmt.name)});\n${indent}try {\n${wsBody}\n${indent}} finally {\n${indent}  await __rex.workspaceEnd();\n${indent}}`;
+    }
+
+    case "AssessStatement": {
+       const conditions = (stmt.cases || []).map((c) => c.condition);
+       const assessVar = nextTemp(ctx, "assess");
+       let blocks = `${indent}const ${assessVar} = await __rex.assess(${stmt.target}, ${JSON.stringify(conditions)});\n`;
+       
+       const cases = stmt.cases || [];
+       for (let i = 0; i < cases.length; i++) {
+          const c = cases[i];
+          const prefix = i === 0 ? "if" : "else if";
+          const blockBody = (c.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+          blocks += `${indent}${prefix} (${assessVar} === ${JSON.stringify(c.condition)}) {\n${blockBody}\n${indent}}\n`;
+       }
+       if (stmt.otherwise && stmt.otherwise.length > 0) {
+          const otherBody = stmt.otherwise.map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+          if (cases.length > 0) blocks += `${indent}else {\n`;
+          blocks += `${otherBody}`;
+          if (cases.length > 0) blocks += `\n${indent}}\n`;
+       }
+       return blocks.trimEnd();
+    }
+
+    case "ToolDeclaration": {
+       const params = stmt.params ? stmt.params.join(", ") : "";
+       const toolBody = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}    `)).join("\n");
+       return `${indent}__rex.registerTool(${JSON.stringify(stmt.name)}, async (${params}) => {\n${toolBody}\n${indent}});`;
+    }
+
+    case "EquipStatement": {
+       return `${indent}await __rex.equip(${JSON.stringify(stmt.name)});`;
+    }
+
+    case "SecurityStatement": {
+       const opts = [];
+       if (stmt.config.sandbox) opts.push(`sandbox: ${JSON.stringify(stmt.config.sandbox)}`);
+       if (stmt.config.lockdown) opts.push(`lockdown: ${JSON.stringify(stmt.config.lockdown)}`);
+       return `${indent}await __xrisk.configureSecurity({ ${opts.join(", ")} });`;
+    }
+
+    case "TelemetryStatement": {
+       const opts = [];
+       if (stmt.config.exporter) opts.push(`exporter: ${JSON.stringify(stmt.config.exporter)}`);
+       if (stmt.config.endpoint) opts.push(`endpoint: ${JSON.stringify(stmt.config.endpoint)}`);
+       if (stmt.config.key) opts.push(`key: ${stmt.config.key}`);
+       return `${indent}await __xrisk.configureTelemetry({ ${opts.join(", ")} });`;
+    }
+
+    case "SpawnStatement": {
+       const opts = stmt.options ? stmt.options : "null";
+       return `${indent}const ${stmt.alias} = await __rex.spawn(${JSON.stringify(stmt.agentType)}, ${opts});`;
+    }
+
+    case "SendStatement": {
+       const dataStr = stmt.data.startsWith("$") ? stmt.data : `{ ${stmt.data} }`;
+       return `${indent}await __rex.send(${dataStr}, ${stmt.target});`;
+    }
+
+    case "RationaleStatement": {
+      const loc = stmt.loc ? JSON.stringify(stmt.loc.start) : "null";
+      return `${indent}await __xrisk.rationale(${JSON.stringify(stmt.reason)}, ${loc});`;
+    }
+
+    case "HostJsStatement": {
+      let rawHost = stmt.raw || "";
+      if (rawHost.endsWith(";")) {
+        rawHost = rawHost.slice(0, -1).trim();
+      }
+      const receiveRegex = /receive\s+from\s+(\$[A-Za-z0-9_]+)/g;
+      if (receiveRegex.test(rawHost)) {
+        rawHost = rawHost.replace(receiveRegex, "await __rex.receive($1)");
+      }
+      const vaultRegex = /vault\("([^"]+)"\)/g;
+      if (vaultRegex.test(rawHost)) {
+        rawHost = rawHost.replace(vaultRegex, "await __xrisk.vault(\"$1\")");
+      }
+      if (rawHost.includes(" | ")) {
+        const parts = rawHost.split(" | ").map((x) => x.trim());
+        if (parts.length > 1) {
+           rawHost = `__rex.pipe(${parts.join(", ")})`;
+        }
+      }
+      return `${indent}${rawHost};`;
+    }
 
     default:
       return `${indent}/* unhandled node: ${stmt.kind} */`;
