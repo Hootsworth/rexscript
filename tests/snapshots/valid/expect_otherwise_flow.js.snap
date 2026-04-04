@@ -28,7 +28,7 @@ async function __rex_main() {
       return;
     }
     else if (true) {
-      __xrisk.emit({ action : "fallback" });
+      __xrisk.emit({  action: "fallback"  });
       return;
     }
     else {

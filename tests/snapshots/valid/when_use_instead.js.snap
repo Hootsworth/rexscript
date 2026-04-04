@@ -17,7 +17,7 @@ async function __rex_main() {
     if (await __rex.check($page, "loaded")) {
       try {
       await __xrisk.before({ action: "use.instead", target: "sql", capability: "FOREIGN_EXEC", loc: {"line":5,"column":5} });
-      const __rex_result_2 = await __rex.useInstead({ hint: "sql", content: "SELECT id , title FROM posts LIMIT 5" });
+      const __rex_result_2 = await __rex.useInstead({ hint: "sql", content: "\n      SELECT id, title FROM posts LIMIT 5\n    " });
       await __xrisk.after({ action: "use.instead", riskLevel: "LOW", result: __rex_result_2 ?? null, loc: {"line":5,"column":5} });
       const $rows = __rex_result_2;
       } catch (err) {
@@ -39,7 +39,7 @@ async function __rex_main() {
     }
   } catch (err) {
     if (true) {
-      __xrisk.emit({ action : "fallback" });
+      __xrisk.emit({  action: "fallback"  });
       return;
     }
     else {

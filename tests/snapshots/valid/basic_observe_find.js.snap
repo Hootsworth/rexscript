@@ -9,7 +9,11 @@ import __xrisk from '@rexscript/xrisk';
 import __rosetta from '@rexscript/rosetta';
 
 async function __rex_main() {
-  const research = await __rex.session({ cookies : true , fingerprint : random , timeout : 30000 });
+  const research = await __rex.session({ 
+  cookies: true,
+  fingerprint: random,
+  timeout: 30000
+ });
   try {
     await __xrisk.before({ action: "observe", target: "https://example.com", capability: "NETWORK", loc: {"line":8,"column":3} });
     const __rex_result_1 = await __rex.observe("https://example.com", { session: research });
@@ -19,14 +23,14 @@ async function __rex_main() {
     const __rex_result_2 = await __rex.find("main article content", $page);
     await __xrisk.after({ action: "find", riskLevel: "LOW", result: __rex_result_2 ?? null, loc: {"line":9,"column":3} });
     const $article = __rex_result_2;
-    __xrisk.emit({ action : "article_extracted" , confidence : $article . confidence });
+    __xrisk.emit({  action: "article_extracted", confidence: $article.confidence  });
   } catch (err) {
     if (__rex.isFailure(err, "Timeout")) {
       __rex.flag($page, "timed_out");
       return;
     }
     else if (true) {
-      __xrisk.emit({ action : "unhandled_failure" });
+      __xrisk.emit({  action: "unhandled_failure"  });
       return;
     }
     else {
