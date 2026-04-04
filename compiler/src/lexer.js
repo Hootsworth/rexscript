@@ -1,5 +1,4 @@
 import { TOKEN_TYPES, SYMBOLS, createToken } from "./tokens.js";
-
 export const REX_KEYWORDS = new Set([
   "goal", "constraint", "expect", "otherwise", "telemetry", "metric", "span", "trace_id",
   "synthesise", "hunt", "assess", "evaluate", "use.instead", "system", "workspace",
@@ -19,16 +18,6 @@ export function loadKeywordsFromString(raw) {
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith("#"))
   );
-}
-
-export function loadKeywords(keywordsPath) {
-  if (typeof process !== "undefined" && process.versions && process.versions.node) {
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const p = keywordsPath || path.resolve(process.cwd(), "contracts/reserved-keywords.txt");
-      return loadKeywordsFromString(fs.readFileSync(p, "utf8"));
-  }
-  return REX_KEYWORDS;
 }
 
 export function tokenize(source, keywords = REX_KEYWORDS) {

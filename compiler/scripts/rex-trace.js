@@ -4,13 +4,12 @@ import { parseFile, analyzeFile } from "../src/index.js";
 import { buildTracePlan } from "../src/trace-plan.js";
 import { ParserError } from "../src/parser.js";
 
-const target = process.argv[2];
-const secondArg = process.argv[3] || null;
-const thirdArg = process.argv[4] || null;
+const args = process.argv.slice(2);
 const KNOWN_MODES = new Set(["default", "strict", "dynamic"]);
-
-const outArg = secondArg && !KNOWN_MODES.has(secondArg) ? secondArg : null;
-const mode = outArg ? (thirdArg || "default") : (secondArg || "default");
+const target = args.find(a => !a.startsWith("--"));
+const nonFlags = args.filter(a => !a.startsWith("--") && a !== target);
+const outArg = nonFlags.find(a => !KNOWN_MODES.has(a)) || null;
+const mode = nonFlags.find(a => KNOWN_MODES.has(a)) || "default";
 
 if (!target) {
   console.error("Usage: node scripts/rex-trace.js <file.rex> [out.json] [default|strict|dynamic]");

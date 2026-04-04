@@ -1,11 +1,11 @@
 {
-  "traceId": "rex-20260403-0010",
+  "traceId": "rex-20260404-0010",
   "sessionId": "session-0370",
   "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
-  "generatedAt": "2026-04-03T20:16:43.377Z",
+  "generatedAt": "2026-04-04T06:01:26.748Z",
   "actionCount": 10,
   "duration": 4270,
-  "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+  "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
   "actions": [
     {
       "action": "TryCatchStatement",
@@ -14,9 +14,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.376Z",
+      "timestamp": "2026-04-04T06:01:26.747Z",
       "duration": 277,
-      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
       "loc": {
         "start": {
           "line": 1,
@@ -35,9 +35,9 @@
       "capability": "NETWORK",
       "target": "\"https://example.com/data\"",
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 303,
-      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
       "loc": {
         "start": {
           "line": 2,
@@ -56,9 +56,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 307,
-      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
       "loc": {
         "start": {
           "line": 4,
@@ -77,9 +77,9 @@
       "capability": "FOREIGN_EXEC",
       "target": "sql",
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 410,
-      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
         "start": {
           "line": 5,
@@ -98,9 +98,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 447,
-      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
       "loc": {
         "start": {
           "line": 8,
@@ -119,9 +119,9 @@
       "capability": "MODEL",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 484,
-      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "loc": {
         "start": {
           "line": 11,
@@ -140,9 +140,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 455,
-      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "loc": {
         "start": {
           "line": 13,
@@ -161,9 +161,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 492,
-      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
       "loc": {
         "start": {
           "line": 14,
@@ -182,9 +182,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 529,
-      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
       "loc": {
         "start": {
           "line": 17,
@@ -203,9 +203,9 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.377Z",
+      "timestamp": "2026-04-04T06:01:26.748Z",
       "duration": 566,
-      "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+      "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
       "loc": {
         "start": {
           "line": 18,
@@ -220,6 +220,21 @@
   ],
   "diagnostics": {
     "warnings": [
+      {
+        "severity": "warning",
+        "code": "WARN020",
+        "message": "Executing use.instead without a configured security sandbox",
+        "loc": {
+          "start": {
+            "line": 5,
+            "column": 5
+          },
+          "end": {
+            "line": 10,
+            "column": 1
+          }
+        }
+      },
       {
         "severity": "warning",
         "code": "WARN005",

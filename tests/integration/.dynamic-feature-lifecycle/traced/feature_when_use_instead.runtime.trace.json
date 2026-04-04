@@ -1,11 +1,11 @@
 {
-  "traceId": "rex-20260403-0003",
-  "sessionId": "session-1775247403",
+  "traceId": "rex-20260404-0003",
+  "sessionId": "session-1775282486",
   "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
-  "generatedAt": "2026-04-03T20:16:43.284Z",
+  "generatedAt": "2026-04-04T06:01:26.653Z",
   "actionCount": 3,
-  "duration": 62,
-  "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+  "duration": 47,
+  "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
   "actions": [
     {
       "action": "observe",
@@ -15,9 +15,9 @@
       "target": "https://example.com/data",
       "xriskDecision": "ALLOW",
       "policyReason": null,
-      "timestamp": "2026-04-03T20:16:43.222Z",
-      "duration": 62,
-      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "timestamp": "2026-04-04T06:01:26.605Z",
+      "duration": 47,
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "result": {
         "url": "https://example.com/data",
         "title": "Untitled Page",
@@ -39,9 +39,9 @@
       "target": "sql",
       "xriskDecision": "ALLOW",
       "policyReason": null,
-      "timestamp": "2026-04-03T20:16:43.284Z",
+      "timestamp": "2026-04-04T06:01:26.653Z",
       "duration": 0,
-      "haiku": "pages drift at dusk / context binds each decision / night remembers all",
+      "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "result": {
         "language": "sql",
         "executor": "native",
@@ -64,7 +64,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-03T20:16:43.284Z",
+      "timestamp": "2026-04-04T06:01:26.653Z",
       "duration": 0,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "result": {

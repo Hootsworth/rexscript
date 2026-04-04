@@ -1,5 +1,4 @@
 // Abstracted for edge implementations
-
 const CODE_SUGGESTIONS = {
   ERR001: "Check spelling or remove unknown keyword.",
   ERR002: "Declare the variable before first use.",
@@ -94,12 +93,4 @@ export function formatDiagnostic(diag, filePath, source = "") {
 
 export function formatDiagnostics(diags, filePath, source = "") {
   return diags.map((d) => formatDiagnostic(d, filePath, source)).join("\n\n");
-}
-
-export function readSource(filePath) {
-  if (typeof process !== "undefined" && process.versions && process.versions.node) {
-      const fs = require("node:fs");
-      return fs.readFileSync(filePath, "utf8");
-  }
-  return ""; // In edge, source must be passed as string
 }

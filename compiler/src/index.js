@@ -1,18 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
-import { tokenize, loadKeywords, loadKeywordsFromString } from "./lexer.js";
+import { tokenize, REX_KEYWORDS, loadKeywordsFromString } from "./lexer.js";
 import { parse } from "./parser.js";
 import { analyze } from "./semantic.js";
 import { generate } from "./codegen.js";
-import { formatDiagnostics, readSource } from "./diagnostic-format.js";
+import { formatDiagnostics } from "./diagnostic-format.js";
+
+export function readSource(filePath) {
+  return fs.readFileSync(filePath, "utf8");
+}
+
+export function loadKeywords(keywordsPath) {
+  const p = keywordsPath || path.resolve(process.cwd(), "contracts/reserved-keywords.txt");
+  if (fs.existsSync(p)) {
+    return loadKeywordsFromString(fs.readFileSync(p, "utf8"));
+  }
+  return REX_KEYWORDS;
+}
 
 export function tokenizeFile(filePath) {
-  const source = fs.readFileSync(filePath, "utf8");
+  const source = readSource(filePath);
   return tokenize(source);
 }
 
 export function parseFile(filePath) {
-  const source = fs.readFileSync(filePath, "utf8");
+  const source = readSource(filePath);
   return parse(source);
 }
 

@@ -3,14 +3,14 @@ import path from "node:path";
 import { compileFile } from "../src/index.js";
 import { ParserError } from "../src/parser.js";
 
-const target = process.argv[2];
-const secondArg = process.argv[3] || null;
-const thirdArg = process.argv[4] || null;
+const args = process.argv.slice(2);
 const KNOWN_MODES = new Set(["default", "strict", "dynamic"]);
-
-const outArg = secondArg && !KNOWN_MODES.has(secondArg) ? secondArg : null;
-const mode = outArg ? (thirdArg || "default") : (secondArg || "default");
-const withMap = process.argv.includes("--map");
+const target = args.find(a => !a.startsWith("--"));
+const nonFlags = args.filter(a => !a.startsWith("--") && a !== target);
+const outArg = nonFlags.find(a => !KNOWN_MODES.has(a)) || null;
+const mode = nonFlags.find(a => KNOWN_MODES.has(a)) || "default";
+const withMap = args.includes("--map");
+const dryRun = args.includes("--dry-run");
 
 if (!target) {
   console.error("Usage: node scripts/rex-compile.js <file.rex> [out.js] [default|strict|dynamic] [--map]");

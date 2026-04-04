@@ -414,7 +414,10 @@ function analyzeStatements(statements, state, inTryBody = false) {
         );
       }
       const content = String(stmt.content || "").toLowerCase();
-      const hasRexCore = /rex\s*-\s*core/.test(content) || content.includes("rex-core");
+      // More robust check for rex-core violation avoiding token joining variation
+      const hasRexCore = /rex\s*-\s*core/.test(content) || 
+                         content.includes("rex-core") || 
+                         (content.includes("rex") && content.includes("core") && content.includes("-"));
       if (state.options.dynamicFeature && hasRexCore) {
         pushDiagnostic(state, "error", "ERR007", "Dynamic feature isolation contract violation", stmt.loc);
       }

@@ -4,11 +4,13 @@ import { spawnSync } from "node:child_process";
 import { compileFile } from "../src/index.js";
 import { ParserError } from "../src/parser.js";
 
-const target = process.argv[2];
-const mode = process.argv[3] || "default";
-const dryRun = process.argv.includes("--dry-run");
-const traceOutIndex = process.argv.indexOf("--trace-out");
-const traceOut = traceOutIndex >= 0 ? process.argv[traceOutIndex + 1] : null;
+const args = process.argv.slice(2);
+const target = args.find(a => !a.startsWith("--"));
+const knownModes = ["default", "strict", "dynamic"];
+const mode = args.find(a => knownModes.includes(a)) || "default";
+const dryRun = args.includes("--dry-run");
+const traceOutIndex = args.indexOf("--trace-out");
+const traceOut = traceOutIndex >= 0 ? args[traceOutIndex + 1] : null;
 
 if (!target) {
   console.error("Usage: node scripts/rex-run.js <file.rex> [default|strict|dynamic] [--dry-run] [--trace-out <file.json>]");

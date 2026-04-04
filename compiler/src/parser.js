@@ -541,6 +541,28 @@ function parseRecover(stream) {
   return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
 }
 
+function parseCatch(stream) {
+  const start = stream.consumeValue("catch");
+  const token = stream.peek();
+  let failureType = "*";
+  if (token && token.value !== "{") {
+    failureType = stream.next().value;
+  }
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
+}
+
+function parseOtherwise(stream) {
+  const start = stream.consumeValue("otherwise");
+  const token = stream.peek();
+  let failureType = "*";
+  if (token && token.value !== "{") {
+    failureType = stream.next().value;
+  }
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "CatchClause", failureType, body }, stream.peek(-1));
+}
+
 function parseAttempt(stream) {
   const start = stream.consumeValue("attempt");
   const body = parseBlock(stream);
@@ -579,7 +601,7 @@ function parseExpectOtherwise(stream) {
   const catches = [];
 
   while (stream.matchValue("otherwise")) {
-    catches.push(parseRecover(stream)); // using parseRecover since signature matches
+    catches.push(parseOtherwise(stream));
   }
 
   if (catches.length === 0) {

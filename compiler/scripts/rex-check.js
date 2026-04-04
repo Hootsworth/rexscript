@@ -2,9 +2,10 @@ import path from "node:path";
 import { checkFile } from "../src/index.js";
 import { ParserError } from "../src/parser.js";
 
-const target = process.argv[2];
-const mode = process.argv.find(a => !a.startsWith("--") && a !== target) || "default";
-const asJson = process.argv.includes("--json");
+const args = process.argv.slice(2);
+const target = args.find(a => !a.startsWith("--"));
+const mode = args.find(a => !a.startsWith("--") && a !== target) || "default";
+const asJson = args.includes("--json");
 
 if (!target) {
   console.error("Usage: node scripts/rex-check.js <file.rex> [default|strict|dynamic]");
