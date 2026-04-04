@@ -1,0 +1,27 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnp
+.pnp.js
+
+# Build and Runtime Outputs
+.rex-run/
+dist/
+build/
+*.vsix
+Packages/*/dist/
+
+# Playwright Testing
+playwright-report/
+test-results/
+playwright/.cache/
+
+# OS / Editor Files
+.DS_Store
+.idea/
+.vscode/
+
+# Non-Production Documents
+docs/ROADMAP.md
+rexscript.md
