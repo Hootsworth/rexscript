@@ -32,6 +32,10 @@
     {
       "file": "valid/host_js_newline_boundaries.rex",
       "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/goal_constraints.rex",
+      "expect": "parse+semantic pass"
     }
   ],
   "invalid": [

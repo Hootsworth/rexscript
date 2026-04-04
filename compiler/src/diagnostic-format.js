@@ -20,7 +20,8 @@ const CODE_SUGGESTIONS = {
   WARN004: "Set parallel limit to prevent unbounded concurrency.",
   WARN005: "Check synthesis confidence before downstream actions.",
   WARN006: "Use explicit language hint for deterministic routing.",
-  WARN007: "Avoid $agent access unless dynamic context truly requires it."
+  WARN007: "Avoid $agent access unless dynamic context truly requires it.",
+  WARN020: "Configure security { sandbox: ..., lockdown: strict } before use.instead execution."
 };
 
 let DIAG_RISK_INDEX = new Map([
@@ -46,7 +47,8 @@ let DIAG_RISK_INDEX = new Map([
   ["WARN004", "MEDIUM"],
   ["WARN005", "LOW"],
   ["WARN006", "MEDIUM"],
-  ["WARN007", "LOW"]
+  ["WARN007", "LOW"],
+  ["WARN020", "MEDIUM"]
 ]);
 
 function diagnosticRisk(code) {

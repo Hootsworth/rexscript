@@ -396,7 +396,10 @@ function parseRecall(stream) {
   if (stream.matchValue("where")) {
     stream.next();
     stream.consumeValue("relevance");
-    const comparator = stream.next()?.value;
+    let comparator = ">";
+    if (stream.peek()?.type === "SYMBOL") {
+      comparator = stream.next().value;
+    }
     const amount = stream.consumeType("NUMBER", "ERR001", "Expected relevance number").value;
     threshold = { comparator, amount: Number(amount) };
   }
@@ -582,8 +585,12 @@ function parseAttempt(stream) {
   }
 
   const catches = [];
-  while (stream.matchValue("recover")) {
-    catches.push(parseRecover(stream));
+  while (stream.matchValue("recover") || stream.matchValue("otherwise")) {
+    if (stream.matchValue("recover")) {
+      catches.push(parseRecover(stream));
+    } else {
+      catches.push(parseOtherwise(stream));
+    }
   }
   
   let ensureBody = null;
@@ -808,7 +815,10 @@ function parseGoal(stream) {
     constraints = {};
     while (!stream.eof() && !stream.matchValue("}")) {
       const field = stream.next().value;
-      const op = stream.next().value; // usually '<'
+      let op = null;
+      if (stream.peek()?.type === "SYMBOL") {
+        op = stream.next().value;
+      }
       if (field === "budget") {
         constraints.budget = Number(stream.consumeType("NUMBER").value);
       } else if (field === "timeout") {

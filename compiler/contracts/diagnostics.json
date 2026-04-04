@@ -121,6 +121,11 @@
       "id": "WARN007",
       "title": "$agent accessed in dynamic feature",
       "riskIfIgnored": "LOW"
+    },
+    {
+      "id": "WARN020",
+      "title": "use.instead executed without configured security sandbox",
+      "riskIfIgnored": "MEDIUM"
     }
   ]
 }

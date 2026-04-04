@@ -42,6 +42,14 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       continue;
     }
 
+    if (ch === '#') {
+      while (i < source.length && source[i] !== "\n") {
+        i += 1;
+        col += 1;
+      }
+      continue;
+    }
+
     if (/\s/.test(ch)) {
       i += 1;
       col += 1;

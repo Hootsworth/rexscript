@@ -310,7 +310,7 @@ function buildPage({ url, html, status = 200, ok = true, sessionId = null, heade
     status
   });
 
-  return {
+  const res = {
     url,
     title,
     content,
@@ -334,6 +334,27 @@ function buildPage({ url, html, status = 200, ok = true, sessionId = null, heade
     },
     raw: String(html || "")
   };
+
+  Object.defineProperty(res, Symbol.for("nodejs.util.inspect.custom"), {
+    enumerable: false,
+    value: function () {
+      const { raw, content, links, forms, ...rest } = this;
+      return {
+        ...rest,
+        content: content.length > 300 ? content.slice(0, 300) + "..." : content,
+        links: `[${links.length} links]`,
+        forms: `[${forms.length} forms]`,
+        _note: "Full HTML omitted from logs. Access via .raw if needed."
+      };
+    }
+  });
+
+  Object.defineProperty(res, Symbol.toStringTag, {
+    enumerable: false,
+    value: "PageResult"
+  });
+
+  return res;
 }
 
 function keywordTokens(selector) {
@@ -382,7 +403,7 @@ function semanticFind(selector, source) {
   const confidence = Math.min(0.99, Number((base + coverage * 0.7).toFixed(2)));
   const best = matches[0] || null;
 
-  return {
+  const res = {
     selector,
     source,
     confidence,
@@ -395,6 +416,26 @@ function semanticFind(selector, source) {
     matches,
     reason: best ? "Matched semantic tokens in source content" : "No semantic token matches found"
   };
+
+  Object.defineProperty(res, Symbol.for("nodejs.util.inspect.custom"), {
+    enumerable: false,
+    value: function () {
+      const { source, matches, ...rest } = this;
+      return {
+        ...rest,
+        source: source?.[Symbol.toStringTag] === "PageResult" ? `[PageResult: ${source.url}]` : source,
+        matches: `[${matches.length} matches]`,
+        _note: "Source object is truncated in this view."
+      };
+    }
+  });
+
+  Object.defineProperty(res, Symbol.toStringTag, {
+    enumerable: false,
+    value: "FindResult"
+  });
+
+  return res;
 }
 
 function normalizeRows(context) {

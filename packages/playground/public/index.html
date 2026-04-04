@@ -3,100 +3,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RexScript Playground</title>
+    <title>Rex's playground — Agents don't browse. They hunt.</title>
     <link rel="stylesheet" href="/index.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <header class="app-header">
-            <div class="logo">
-                <span class="logo-icon">🦖</span>
-                <span class="logo-text">RexScript <b>Playground</b></span>
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <div class="sidebar-item active" data-view="explorer" title="Explorer (Cmd+Shift+E)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                </div>
+                <div class="sidebar-item" data-view="examples" title="Examples">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                </div>
+                <div class="sidebar-item" data-view="trace" title="Tracing Context">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
             </div>
-            <div class="actions">
-                <button id="runBtn" class="btn primary">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
-                    </svg>
-                    Hunt
-                </button>
-                <button id="clearBtn" class="btn secondary">Clear Output</button>
+            <div class="sidebar-bottom">
+                <div class="sidebar-item" data-view="settings" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </div>
             </div>
-        </header>
-        <main class="workspace">
-            <div class="pane editor-pane">
-                <div class="pane-header">Source Code <span>(playground.rex)</span></div>
-                <textarea id="editor" spellcheck="false" autocomplete="off">
-// Welcome to RexScript.
+        </aside>
+
+        <!-- Secondary Sidebar (Explorer/Examples) -->
+        <aside class="panel" id="resourcePanel">
+            <div class="panel-header" id="panelTitle">Explorer</div>
+            <div class="panel-content" id="panelContent">
+                <!-- Virtual File Tree -->
+                <div class="file-item active" id="mainRexFile">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name">playground.rex</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main IDE Content -->
+        <main class="ide-main">
+            <header class="ide-header">
+                <div class="logo">
+                   <span class="logo-icon">🦖</span>
+                   <span class="logo-text">Rex's <b>Playground</b></span>
+                </div>
+                <div class="tab-list">
+                    <div class="tab active">
+                        <span class="tab-icon">📄</span>
+                        playground.rex
+                    </div>
+                </div>
+                <div class="ide-actions">
+                    <button id="runBtn" class="btn primary" disabled>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+                        Hunt
+                    </button>
+                    <button id="clearBtn" class="btn secondary">Clear</button>
+                </div>
+            </header>
+
+            <div class="editor-container" id="editorHost">
+                <!-- Monaco will be mounted here -->
+            </div>
+
+            <!-- Bottom Terminal Panel -->
+            <footer class="bottom-panel">
+                <div class="panel-tabs">
+                    <div class="panel-tab active" data-target="console">Terminal</div>
+                    <div class="panel-tab" data-target="problems">Problems</div>
+                </div>
+                <div class="panel-body">
+                    <div id="terminal" class="terminal-content"></div>
+                </div>
+            </footer>
+        </main>
+
+        <!-- Global Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <div class="status-item" id="connectionStatus">
+                    <div class="status-dot"></div>
+                    Ready
+                </div>
+                <div class="status-item">UTF-8</div>
+            </div>
+            <div class="status-right">
+                <div class="status-item" id="cursorPos">Ln 1, Col 1</div>
+                <div class="status-item">RexScript v0.1.0</div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Monaco configuration
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+        let monacoEditor;
+        const REX_EXAMPLES = {
+            "Simple Hunt": `goal "Scrape product price" {
+  attempt {
+    observe page "https://example.com" as $page
+    find "price" in $page as $price
+    console.log("Found price:", $price)
+    remember $price tagged "result"
+  } recover Timeout {
+    retry
+  }
+}`,
+            "Parallel Search": `goal "Parallel Competitor Check" {
+  parallel limit 2 {
+    observe page "https://amazon.com" as $a
+    observe page "https://ebay.com" as $e
+  } then {
+    synthesise [$a, $e] as $summary
+    console.log("Summary:", $summary)
+  }
+}`,
+            "Logic & Branching": `goal "Decision Logic" {
+  observe page "https://news.ycombinator.com" as $hn
+  
+  find "Show HN" in $hn as $show
+  
+  when $show confidence > 0.8 {
+    console.log("Lots of projects today!")
+  } otherwise {
+    console.log("Quiet day.")
+  }
+}`
+        };
+
+        const runBtn = document.getElementById('runBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const terminal = document.getElementById('terminal');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        require(['vs/editor/editor.main'], function () {
+            // Register RexScript language
+            monaco.languages.register({ id: 'rexscript' });
+
+            monaco.languages.setMonarchTokensProvider('rexscript', {
+                keywords: [
+                    'goal', 'constraint', 'attempt', 'recover', 'otherwise', 'upto',
+                    'observe', 'page', 'as', 'find', 'in', 'remember', 'tagged',
+                    'recall', 'where', 'relevance', 'synthesise', 'parallel', 'limit',
+                    'then', 'when', 'retry', 'skip', 'rotate', 'proxy', 'rationale',
+                    'telemetry', 'exporter', 'endpoint', 'flag', 'emit', 'session',
+                    'workspace', 'tool', 'equip', 'security', 'spawn', 'send', 'receive', 'vault'
+                ],
+                operators: ['=', '>', '<', '>=', '<=', '!=', ':', '|'],
+                tokenizer: {
+                    root: [
+                        [/[a-zA-Z_$][\w$]*/, {
+                            cases: {
+                                '@keywords': 'keyword',
+                                '@default': 'variable'
+                            }
+                        }],
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/"([^"\\]|\\.)*"/, 'string'],
+                        [/'([^'\\]|\\.)*'/, 'string'],
+                        [/\d+/, 'number'],
+                        [/\/\/.*/, 'comment'],
+                        [/@operators/, 'operator']
+                    ]
+                }
+            });
+
+            // Define custom theme
+            monaco.editor.defineTheme('rex-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: '10b981', fontStyle: 'bold' },
+                    { token: 'variable', foreground: 'e4e4e7' },
+                    { token: 'string', foreground: '3b82f6' },
+                    { token: 'comment', foreground: '52525b', fontStyle: 'italic' },
+                    { token: 'number', foreground: 'f59e0b' },
+                ],
+                colors: {
+                    'editor.background': '#09090b',
+                    'editor.foreground': '#e4e4e7',
+                    'editor.lineHighlightBackground': '#18181b',
+                    'editorCursor.foreground': '#10b981',
+                    'editorWhitespace.foreground': '#27272a',
+                    'editorIndentGuide.background': '#18181b'
+                }
+            });
+
+            const initialCode = \`// Welcome to Rex's playground.
 // Agents don't browse. They hunt.
 
 goal "Find out what RexScript is" constraint { budget < 0.10 } {
   attempt {
-      hunt page "https://github.com" as $content;
-      synthesise [$content] as $summary;
+      observe page "https://github.com" as $page
+      find "RexScript" in $page as $result
+      synthesise [$result] as $summary
+      console.log("SUMMARY:", $summary)
   } recover Timeout {
-      telemetry {
-          exporter "console"
-          endpoint "local"
-      }
+      retry
+  } otherwise * {
+      skip
   }
-}
-</textarea>
-            </div>
-            <div class="pane terminal-pane">
-                <div class="pane-header">Agent Uplink <span>(stdout)</span></div>
-                <div id="terminal" class="terminal-content"></div>
-            </div>
-        </main>
-    </div>
+}\`;
 
-    <script>
-        const ws = new WebSocket(`ws://${window.location.host}`);
-        const terminal = document.getElementById('terminal');
-        const editor = document.getElementById('editor');
-        const runBtn = document.getElementById('runBtn');
-        const clearBtn = document.getElementById('clearBtn');
+            monacoEditor = monaco.editor.create(document.getElementById('editorHost'), {
+                value: initialCode,
+                language: 'rexscript',
+                theme: 'rex-dark',
+                fontSize: 14,
+                fontFamily: 'Fira Code',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                lineNumbers: 'on',
+                roundedSelection: false,
+                padding: { top: 20 }
+            });
+
+            // Track cursor position
+            monacoEditor.onDidChangeCursorPosition((e) => {
+                document.getElementById('cursorPos').innerText = \`Ln \${e.position.lineNumber}, Col \${e.position.column}\`;
+            });
+
+            // Enable Run button
+            runBtn.disabled = false;
+        });
+
+        // WebSocket & Backend Logic
+        let ws;
+        function connect() {
+            ws = new WebSocket(\`ws://\${window.location.host}\`);
+            
+            ws.onopen = () => {
+                connectionStatus.classList.add('online');
+                appendToTerminal('[Agent Uplink Established]', 'system');
+            };
+
+            ws.onclose = () => {
+                connectionStatus.classList.remove('online');
+                appendToTerminal('[Agent Uplink Severed. Retrying...]', 'error');
+                setTimeout(connect, 2000);
+            };
+
+            ws.onerror = () => {
+                appendToTerminal('[WebSocket Error]', 'error');
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'output') {
+                    appendToTerminal(msg.data, 'output');
+                } else if (msg.type === 'error') {
+                    appendToTerminal(msg.data, 'error');
+                } else if (msg.type === 'exit') {
+                    appendToTerminal(\`\\n[Process exited with code \${msg.code}]\\n\`, 'system');
+                    runBtn.disabled = false;
+                    runBtn.innerHTML = \`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg> Hunt\`;
+                }
+            };
+        }
+        connect();
 
         function appendToTerminal(text, type = 'normal') {
-            const span = document.createElement('span');
-            span.className = type;
+            const span = document.createElement('div');
+            span.className = 'term-line ' + type;
             
-            // Basic ANSI color stripping for HTML rendering (for now just replacing newlines)
-            let formatted = text.replace(/\x1b\[[0-9;]*m/g, ''); 
+            let formatted = text.replace(/\\x1b\\[[0-9;]*m/g, ''); 
             formatted = formatted.replace(/>/g, '&gt;').replace(/</g, '&lt;');
             
-            span.innerHTML = formatted.replace(/\n/g, '<br/>');
+            span.innerHTML = formatted.replace(/\\n/g, '<br/>');
             terminal.appendChild(span);
             terminal.scrollTop = terminal.scrollHeight;
         }
 
-        ws.onopen = () => {
-            appendToTerminal('[Connected to Runtime Engine]\n\n', 'system');
-        };
-
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'output') {
-                appendToTerminal(msg.data, 'output');
-            } else if (msg.type === 'error') {
-                appendToTerminal(msg.data, 'error');
-            } else if (msg.type === 'exit') {
-                appendToTerminal(`\n[Process exited with code ${msg.code}]\n\n`, 'system');
-                runBtn.disabled = false;
-                runBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg> Hunt`;
-            }
-        };
-
         runBtn.addEventListener('click', () => {
+            if (!monacoEditor || !ws || ws.readyState !== WebSocket.OPEN) return;
+            
             runBtn.disabled = true;
-            runBtn.innerHTML = 'Hunting...';
-            ws.send(JSON.stringify({ type: 'RUN_SCRIPT', code: editor.value }));
+            runBtn.innerHTML = '<span class="spin">🦖</span> Hunting...';
+            ws.send(JSON.stringify({ type: 'RUN_SCRIPT', code: monacoEditor.getValue() }));
         });
 
         clearBtn.addEventListener('click', () => {
             terminal.innerHTML = '';
+            if (monacoEditor) {
+                monacoEditor.setValue('');
+            }
+        });
+
+        // Sidebar logic
+        function attachSidebarListeners() {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const view = item.getAttribute('data-view');
+                    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    const panelTitle = document.getElementById('panelTitle');
+                    const panelContent = document.getElementById('panelContent');
+                    
+                    if (view === 'explorer') {
+                        panelTitle.innerText = 'Explorer';
+                        panelContent.innerHTML = \`
+                            <div class="file-item active">
+                                <span class="file-icon">📄</span>
+                                <span class="file-name">playground.rex</span>
+                            </div>
+                        \`;
+                    } else if (view === 'examples') {
+                        panelTitle.innerText = 'Examples';
+                        let html = '';
+                        for (const name in REX_EXAMPLES) {
+                            html += \`
+                                <div class="example-item" data-name="\${name}">
+                                    <span class="file-icon">💡</span>
+                                    <span class="file-name">\${name}</span>
+                                </div>
+                            \`;
+                        }
+                        panelContent.innerHTML = html;
+                        
+                        document.querySelectorAll('.example-item').forEach(ex => {
+                            ex.addEventListener('click', () => {
+                                const code = REX_EXAMPLES[ex.getAttribute('data-name')];
+                                monacoEditor.setValue(code);
+                            });
+                        });
+                    } else {
+                        panelTitle.innerText = view.charAt(0).toUpperCase() + view.slice(1);
+                        panelContent.innerHTML = '<div style="padding: 20px; color: #52525b; font-size: 0.9rem;">View not implemented yet.</div>';
+                    }
+                });
+            });
+        }
+        attachSidebarListeners();
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                runBtn.click();
+            }
         });
     </script>
 </body>

@@ -3,6 +3,11 @@ import path from "node:path";
 
 const __pending = [];
 const __actions = [];
+const __goalStack = [];
+const __runtimeConfig = {
+  security: null,
+  telemetry: null
+};
 const __diagnostics = {
   warnings: [],
   errors: []
@@ -322,6 +327,121 @@ process.on("exit", () => {
 });
 
 const xrisk = {
+  async goalStart(description = null, constraints = null, loc = null) {
+    const startedAt = Date.now();
+    const timestamp = nowIso();
+    __goalStack.push({ description, constraints, loc, startedAt, timestamp });
+    __actions.push({
+      action: "goal_start",
+      kind: "goal_start",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: description,
+      xriskDecision: "ALLOW",
+      timestamp,
+      duration: 0,
+      haiku: buildHaiku(`goal_start:${description || "unknown"}:${__actions.length}`),
+      result: summarizeResult({ description, constraints }),
+      loc: loc || null
+    });
+    return { started: true };
+  },
+
+  async goalEnd() {
+    const goal = __goalStack.pop() || null;
+    const endedAt = Date.now();
+    const duration = goal ? Math.max(0, endedAt - goal.startedAt) : 0;
+    __actions.push({
+      action: "goal_end",
+      kind: "goal_end",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: goal?.description || null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration,
+      haiku: buildHaiku(`goal_end:${goal?.description || "unknown"}:${__actions.length}`),
+      result: summarizeResult({
+        description: goal?.description || null,
+        constraints: goal?.constraints || null
+      }),
+      loc: goal?.loc || null
+    });
+    return { ended: true };
+  },
+
+  async rationale(reason = null, loc = null) {
+    __actions.push({
+      action: "rationale",
+      kind: "rationale",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: reason,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration: 0,
+      haiku: buildHaiku(`rationale:${reason || ""}:${__actions.length}`),
+      result: summarizeResult({ reason }),
+      loc: loc || null
+    });
+    return { stored: true };
+  },
+
+  async configureSecurity(config = {}) {
+    __runtimeConfig.security = { ...(config || {}) };
+    __actions.push({
+      action: "security",
+      kind: "config",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration: 0,
+      haiku: buildHaiku(`security:${JSON.stringify(__runtimeConfig.security)}:${__actions.length}`),
+      result: summarizeResult(__runtimeConfig.security),
+      loc: null
+    });
+    return { configured: true };
+  },
+
+  async configureTelemetry(config = {}) {
+    __runtimeConfig.telemetry = { ...(config || {}) };
+    __actions.push({
+      action: "telemetry",
+      kind: "config",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration: 0,
+      haiku: buildHaiku(`telemetry:${JSON.stringify(__runtimeConfig.telemetry)}:${__actions.length}`),
+      result: summarizeResult(__runtimeConfig.telemetry),
+      loc: null
+    });
+    return { configured: true };
+  },
+
+  async vault(key = "") {
+    const envKey = `REX_VAULT_${String(key).trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`;
+    const value = process.env[envKey] ?? null;
+    __actions.push({
+      action: "vault",
+      kind: "vault",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: key || null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration: 0,
+      haiku: buildHaiku(`vault:${key}:${__actions.length}`),
+      result: summarizeResult({ key, found: value != null }),
+      loc: null
+    });
+    return value;
+  },
+
   async before(event = {}) {
     const risk = evaluateBeforeRisk(event);
     const pending = {
@@ -416,6 +536,9 @@ const xrisk = {
   resetTrace() {
     __pending.length = 0;
     __actions.length = 0;
+    __goalStack.length = 0;
+    __runtimeConfig.security = null;
+    __runtimeConfig.telemetry = null;
     __diagnostics.errors.length = 0;
     __diagnostics.warnings.length = 0;
   },
