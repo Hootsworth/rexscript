@@ -33,7 +33,7 @@ function main() {
     const lowConfidenceFile = writeFixture(
       tmp,
       "low-confidence.rex",
-      "use.instead as $out {\n  import math\n  def calc(x):\n    return x\n}\n"
+      "use.instead as $out {\n  import math\n  def calc(x):\n    pass\n}\n"
     );
     const highConfidenceFile = writeFixture(
       tmp,

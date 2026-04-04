@@ -1,11 +1,11 @@
 {
   "traceId": "rex-20260404-0003",
-  "sessionId": "session-1775282486",
+  "sessionId": "session-1775309568",
   "file": "/Users/adityadixit/Desktop/power-cli/rexscript/tests/fixtures/valid/when_use_instead.rex",
-  "generatedAt": "2026-04-04T06:01:26.653Z",
+  "generatedAt": "2026-04-04T13:32:48.988Z",
   "actionCount": 3,
-  "duration": 47,
-  "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
+  "duration": 103,
+  "haiku": "footsteps in the logs / parallel thoughts hold the line / the answer leaves a trail",
   "actions": [
     {
       "action": "observe",
@@ -15,8 +15,8 @@
       "target": "https://example.com/data",
       "xriskDecision": "ALLOW",
       "policyReason": null,
-      "timestamp": "2026-04-04T06:01:26.605Z",
-      "duration": 47,
+      "timestamp": "2026-04-04T13:32:48.885Z",
+      "duration": 103,
       "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "result": {
         "url": "https://example.com/data",
@@ -39,7 +39,7 @@
       "target": "sql",
       "xriskDecision": "ALLOW",
       "policyReason": null,
-      "timestamp": "2026-04-04T06:01:26.653Z",
+      "timestamp": "2026-04-04T13:32:48.988Z",
       "duration": 0,
       "haiku": "signals cross the wire / the agent names each failure / nothing stays untraced",
       "result": {
@@ -64,7 +64,7 @@
       "capability": "NONE",
       "target": null,
       "xriskDecision": "ALLOW",
-      "timestamp": "2026-04-04T06:01:26.653Z",
+      "timestamp": "2026-04-04T13:32:48.988Z",
       "duration": 0,
       "haiku": "queries touch the dark / traces bloom in silence / safety keeps the gate",
       "result": {

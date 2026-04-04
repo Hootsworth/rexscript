@@ -8,7 +8,7 @@ export function scoreLanguage(content, language) {
     graphql: ["query", "mutation", "fragment", "__typename"],
     xpath: ["//", "@", "text()", "node()"],
     json: ["{", "}", ":", "\""],
-    yaml: [": ", "---"]
+    yaml: [": ", "---", "true", "false", "null"]
   };
 
   const hints = signatures[language] || [];
