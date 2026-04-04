@@ -25,6 +25,7 @@
     "integration:runtime-behavior": "node ../tests/integration/runtime-behavior-check.js",
     "integration:runtime-browser-adapter": "node ../tests/integration/runtime-browser-adapter-check.js",
     "integration:host-js-boundary": "node ../tests/integration/host-js-boundary-check.js",
+    "integration:compiler-surface": "node ../tests/integration/compiler-surface-check.js",
     "integration:runtime-blocked-trace": "node ../tests/integration/runtime-blocked-trace-check.js",
     "integration:compiler-policy": "node ../tests/integration/compiler-policy-check.js",
     "integration:recovery-sourcemap": "node ../tests/integration/recovery-sourcemap-check.js",
@@ -44,6 +45,6 @@
     "integration:phase5-policy-gate-stress": "node ../tests/integration/phase5-policy-gate-stress-check.js",
     "integration:phase5-hardening": "npm run -s integration:phase5-policy-gate-stress && npm run -s integration:dynamic-feature-lifecycle",
     "integration:dynamic-feature-lifecycle": "bash ../tests/integration/dynamic-feature-lifecycle.sh",
-    "integration:full-validation": "npm run -s phase1:smoke && npm run -s codegen:snapshots && npm run -s integration:phase3 && npm run -s integration:host-js-boundary && npm run -s integration:compiler-policy && npm run -s integration:recovery-sourcemap && npm run -s integration:rosetta-detection && npm run -s integration:phase-b && npm run -s integration:diagnostic-format && npm run -s integration:phase-d && npm run -s integration:phase5-hardening"
+    "integration:full-validation": "npm run -s phase1:smoke && npm run -s codegen:snapshots && npm run -s integration:phase3 && npm run -s integration:host-js-boundary && npm run -s integration:compiler-surface && npm run -s integration:compiler-policy && npm run -s integration:recovery-sourcemap && npm run -s integration:rosetta-detection && npm run -s integration:phase-b && npm run -s integration:diagnostic-format && npm run -s integration:phase-d && npm run -s integration:phase5-hardening"
   }
 }

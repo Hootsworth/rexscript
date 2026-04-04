@@ -31,6 +31,14 @@ export const SYMBOLS = new Set([
   "!"
 ]);
 
-export function createToken(type, value, line, column) {
-  return { type, value, line, column };
+export function createToken(type, value, line, column, meta = {}) {
+  return {
+    type,
+    value,
+    line,
+    column,
+    start: meta.start ?? null,
+    end: meta.end ?? null,
+    terminated: meta.terminated ?? true
+  };
 }

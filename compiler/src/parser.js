@@ -12,8 +12,9 @@ class ParserError extends Error {
 }
 
 class TokenStream {
-  constructor(tokens) {
+  constructor(tokens, source) {
     this.tokens = tokens;
+    this.source = source;
     this.pos = 0;
   }
 
@@ -80,6 +81,16 @@ class TokenStream {
     this.pos += 1;
     return token;
   }
+}
+
+function decodeStringToken(token, code = "ERR001") {
+  if (!token || token.type !== "STRING") {
+    throw new ParserError(code, "Expected string literal", token);
+  }
+  if (token.terminated === false) {
+    throw new ParserError(code, "Unterminated string literal", token);
+  }
+  return token.value.slice(1, -1);
 }
 
 const REX_STATEMENT_KEYWORDS = new Set([
@@ -166,32 +177,81 @@ function parseStringList(stream) {
 }
 
 function parseBracedRaw(stream) {
-  stream.consumeValue("{");
-  let depth = 1;
-  const body = [];
-
-  while (!stream.eof() && depth > 0) {
-    const token = stream.next();
-    if (!token) {
-      break;
-    }
-    if (token.value === "{") {
-      depth += 1;
-      body.push(token);
-      continue;
-    }
-    if (token.value === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        break;
-      }
-      body.push(token);
-      continue;
-    }
-    body.push(token);
+  const open = stream.consumeValue("{");
+  const startIndex = open.end ?? null;
+  if (startIndex == null) {
+    throw new ParserError("ERR001", "Missing source position for raw block", open);
   }
 
-  return body.map((t) => t.value).join(" ");
+  let depth = 1;
+  let i = startIndex;
+  let quote = null;
+  let escaped = false;
+  const source = stream.source || "";
+
+  while (i < source.length) {
+    const ch = source[i];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === quote) {
+        quote = null;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      i += 1;
+      continue;
+    }
+
+    if (ch === "#") {
+      while (i < source.length && source[i] !== "\n") {
+        i += 1;
+      }
+      continue;
+    }
+
+    if (ch === "{") {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+
+    if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        const raw = source.slice(startIndex, i);
+        while (!stream.eofRaw()) {
+          const token = stream.peekRaw();
+          if (!token) {
+            break;
+          }
+          if ((token.start ?? Number.MAX_SAFE_INTEGER) >= i) {
+            break;
+          }
+          stream.nextRaw();
+        }
+        const closeToken = stream.peekRaw();
+        if (!closeToken || closeToken.value !== "}" || closeToken.start !== i) {
+          throw new ParserError("ERR001", "Failed to synchronize raw block parser", closeToken || open);
+        }
+        stream.nextRaw();
+        return raw;
+      }
+      i += 1;
+      continue;
+    }
+
+    i += 1;
+  }
+
+  throw new ParserError("ERR001", "Unterminated block", open);
 }
 
 function parseBlock(stream) {
@@ -345,7 +405,7 @@ function parseFind(stream) {
 
   if (stream.matchValue("{")) {
     sourceType = "raw";
-    sourceRaw = parseBracedRaw(stream);
+    sourceRaw = `{${parseBracedRaw(stream)}}`;
   } else {
     source = parseVariable(stream);
   }
@@ -484,7 +544,7 @@ function parseParallel(stream) {
     if (stream.matchValue("synthesise")) {
       thenHandler = parseSynthesise(stream);
     } else {
-      thenHandler = { kind: "HostExpression", raw: stream.next()?.value || null };
+      thenHandler = parseHostJsStatement(stream);
     }
   }
 
@@ -497,7 +557,8 @@ function parseSpawn(stream) {
   const token = stream.peek();
   let agentType;
   if (token && (token.type === "STRING" || token.type === "IDENTIFIER")) {
-      agentType = stream.next().value;
+      const agentToken = stream.next();
+      agentType = agentToken.type === "STRING" ? decodeStringToken(agentToken) : agentToken.value;
   } else {
       throw new ParserError("ERR001", "Expected agent type", token);
   }
@@ -576,12 +637,15 @@ function parseAttempt(stream) {
     upto = Number(stream.consumeType("NUMBER", "ERR001", "attempt upto must be a number").value);
   }
   
-  let timeout = null;
+  let timeoutMs = null;
   if (stream.matchValue("timeout")) {
     stream.next();
-    const timeNum = stream.consumeType("NUMBER").value;
-    const timeUnit = stream.consumeType("IDENTIFIER").value;
-    timeout = timeNum + timeUnit;
+    const timeNum = stream.consumeType("NUMBER", "ERR001", "attempt timeout must be a number").value;
+    let unit = null;
+    if (stream.matchValue("ms") || stream.matchValue("s") || stream.matchValue("m")) {
+      unit = stream.next()?.value || null;
+    }
+    timeoutMs = durationToMs(timeNum, unit);
   }
 
   const catches = [];
@@ -599,7 +663,7 @@ function parseAttempt(stream) {
     ensureBody = parseBlock(stream);
   }
 
-  return withLoc(start, { kind: "AttemptStatement", body, upto, timeout, catches, ensureBody }, stream.peek(-1));
+  return withLoc(start, { kind: "AttemptStatement", body, upto, timeoutMs, catches, ensureBody }, stream.peek(-1));
 }
 
 function parseExpectOtherwise(stream) {
@@ -677,6 +741,21 @@ function parseRotateProxy(stream) {
   const start = stream.consumeValue("rotate");
   stream.consumeValue("proxy");
   return withLoc(start, { kind: "RotateProxyStatement" }, stream.peek(-1));
+}
+
+function durationToMs(value, unit) {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) {
+    return null;
+  }
+  const normalized = String(unit || "ms").toLowerCase();
+  if (normalized === "s") {
+    return amount * 1000;
+  }
+  if (normalized === "m") {
+    return amount * 60 * 1000;
+  }
+  return amount;
 }
 
 function readConditionTokensUntilBlock(stream) {
@@ -807,7 +886,7 @@ function parseVariableDeclaration(stream, declType) {
 
 function parseGoal(stream) {
   const start = stream.consumeValue("goal");
-  const description = stream.consumeType("STRING").value;
+  const description = decodeStringToken(stream.consumeType("STRING"));
   let constraints = null;
   if (stream.matchValue("constraint")) {
     stream.next();
@@ -840,21 +919,24 @@ function parseGoal(stream) {
 
 function parseWorkspace(stream) {
   const start = stream.consumeValue("workspace");
-  const name = stream.consumeType("STRING").value;
+  const name = decodeStringToken(stream.consumeType("STRING"));
   const body = parseBlock(stream);
   return withLoc(start, { kind: "WorkspaceStatement", name, body }, stream.peek(-1));
 }
 
 function parseRationale(stream) {
   const start = stream.consumeValue("rationale");
-  const reason = stream.consumeType("STRING").value;
+  const reason = decodeStringToken(stream.consumeType("STRING"));
   if (stream.matchValue(";")) stream.next();
   return withLoc(start, { kind: "RationaleStatement", reason }, stream.peek(-1));
 }
 
 function parseAssessCase(stream) {
   const start = stream.consumeValue("case");
-  const condition = stream.consumeType("STRING", "ERR001", "assess case requires a string condition").value;
+  const condition = decodeStringToken(
+    stream.consumeType("STRING", "ERR001", "assess case requires a string condition"),
+    "ERR001"
+  );
   if (stream.matchValue(":")) stream.next();
   
   const body = [];
@@ -922,7 +1004,7 @@ function parseSecurity(stream) {
   while (!stream.eof() && !stream.matchValue("}")) {
      const field = stream.next().value;
      if (field === "sandbox") {
-        config.sandbox = stream.consumeType("STRING").value;
+        config.sandbox = decodeStringToken(stream.consumeType("STRING"));
      } else if (field === "lockdown") {
         config.lockdown = stream.next().value;
      } else {
@@ -940,9 +1022,9 @@ function parseTelemetry(stream) {
   while (!stream.eof() && !stream.matchValue("}")) {
      const field = stream.next().value;
      if (field === "exporter") {
-        config.exporter = stream.consumeType("STRING").value;
+        config.exporter = decodeStringToken(stream.consumeType("STRING"));
      } else if (field === "endpoint") {
-        config.endpoint = stream.consumeType("STRING").value;
+        config.endpoint = decodeStringToken(stream.consumeType("STRING"));
      } else if (field === "key") {
         config.key = parseVariable(stream);
      } else {
@@ -1031,7 +1113,12 @@ function parseStatement(stream) {
 
 export function parse(source) {
   const tokens = tokenize(source);
-  const stream = new TokenStream(tokens);
+  for (const token of tokens) {
+    if (token.type === "STRING" && token.terminated === false) {
+      throw new ParserError("ERR001", "Unterminated string literal", token);
+    }
+  }
+  const stream = new TokenStream(tokens, source);
   const body = [];
 
   while (!stream.eof()) {

@@ -511,6 +511,28 @@ const xrisk = {
     return { stored: true };
   },
 
+  async withTimeout(fn, timeoutMs = 0) {
+    const duration = Number(timeoutMs) || 0;
+    if (duration <= 0 || typeof fn !== "function") {
+      return typeof fn === "function" ? fn() : fn;
+    }
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(makeXriskError("Timeout", `Operation timed out after ${duration}ms`));
+      }, duration);
+      Promise.resolve()
+        .then(() => fn())
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  },
+
   emit(event = {}) {
     const action = event.action || "emit";
     __actions.push({

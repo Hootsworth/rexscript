@@ -3,6 +3,9 @@ import { spawnSync } from "node:child_process";
 
 const __memory = [];
 const __sessions = new Map();
+const __workspaces = [];
+const __tools = new Map();
+const __agents = new Map();
 const MAX_SNIPPET = 220;
 const MAX_MEMORY_ENTRIES = 500;
 const IMPLEMENTED_USE_INSTEAD = new Set(["sql", "regex", "python", "bash", "graphql", "xpath", "json", "yaml"]);
@@ -287,6 +290,79 @@ function makeRuntimeError(name, message) {
   err.name = name;
   err.code = name;
   return err;
+}
+
+function cloneValue(value) {
+  if (typeof globalThis.structuredClone === "function") {
+    try {
+      return globalThis.structuredClone(value);
+    } catch {
+      // fall through to JSON clone
+    }
+  }
+
+  if (value == null || typeof value !== "object") {
+    return value;
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return value;
+  }
+}
+
+function currentWorkspace() {
+  return __workspaces[__workspaces.length - 1] || null;
+}
+
+function cleanStringLiteral(value, fallback = "") {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  return value;
+}
+
+function resolveAgentTarget(target) {
+  if (!target) {
+    return null;
+  }
+  if (typeof target === "string") {
+    return __agents.get(target) || null;
+  }
+  if (typeof target === "object") {
+    if (target.id && __agents.has(target.id)) {
+      return __agents.get(target.id);
+    }
+    if (Array.isArray(target.inbox)) {
+      return target;
+    }
+  }
+  return null;
+}
+
+function summarizeForAssess(target) {
+  if (target == null) {
+    return "";
+  }
+  if (typeof target === "string") {
+    return target;
+  }
+  if (typeof target === "number" || typeof target === "boolean") {
+    return String(target);
+  }
+  if (typeof target === "object") {
+    return [
+      target.summary,
+      target.content,
+      target.title,
+      target.reason,
+      target.text
+    ]
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+      .join(" ");
+  }
+  return String(target);
 }
 
 function ensureSessionOpen(session, actionName) {
@@ -1297,6 +1373,135 @@ const runtime = {
     };
     __sessions.set(id, session);
     return session;
+  },
+
+  async workspaceStart(name = "default") {
+    const workspace = {
+      name: cleanStringLiteral(name, "default"),
+      startedAt: nowIso()
+    };
+    __workspaces.push(workspace);
+    return workspace;
+  },
+
+  async workspaceEnd() {
+    return __workspaces.pop() || null;
+  },
+
+  async assess(target, conditions = []) {
+    const available = Array.isArray(conditions) ? conditions : [];
+    if (available.length === 0) {
+      return null;
+    }
+
+    if (target == null && available.includes("empty")) {
+      return "empty";
+    }
+
+    if (Number(target?.confidence ?? 1) < 0.5) {
+      const confidenceMatch = available.find((item) =>
+        ["low_confidence", "unreliable", "seems_unreliable"].includes(String(item))
+      );
+      if (confidenceMatch) {
+        return confidenceMatch;
+      }
+    }
+
+    const haystack = summarizeForAssess(target).toLowerCase();
+    const directMatch = available.find((item) => haystack.includes(String(item).toLowerCase()));
+    if (directMatch) {
+      return directMatch;
+    }
+
+    if (!haystack.trim() && available.includes("empty")) {
+      return "empty";
+    }
+
+    return available[0] ?? null;
+  },
+
+  registerTool(name, fn) {
+    if (!name || typeof fn !== "function") {
+      throw makeRuntimeError("CapabilityExceeded", "registerTool requires a tool name and function");
+    }
+    __tools.set(name, fn);
+    return true;
+  },
+
+  async equip(name) {
+    if (!__tools.has(name)) {
+      throw makeRuntimeError("CapabilityExceeded", `Tool '${name}' is not registered`);
+    }
+    return {
+      name,
+      equipped: true,
+      workspace: currentWorkspace()?.name || null
+    };
+  },
+
+  async spawn(agentType, options = null) {
+    const id = `agent-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const agent = {
+      id,
+      type: cleanStringLiteral(agentType, "default"),
+      options: options && typeof options === "object" ? cloneValue(options) : options,
+      inbox: [],
+      outbox: [],
+      createdAt: nowIso(),
+      workspace: currentWorkspace()?.name || null,
+      active: true
+    };
+    __agents.set(id, agent);
+    return agent;
+  },
+
+  async send(data, target) {
+    const agent = resolveAgentTarget(target);
+    if (!agent) {
+      throw makeRuntimeError("CapabilityExceeded", "send target is not a known agent");
+    }
+    const payload = cloneValue(data);
+    const envelope = {
+      payload,
+      receivedAt: nowIso()
+    };
+    agent.inbox.push(envelope);
+    agent.outbox.push(envelope);
+    return {
+      delivered: true,
+      agentId: agent.id,
+      queueDepth: agent.inbox.length
+    };
+  },
+
+  async receive(target) {
+    const agent = resolveAgentTarget(target);
+    if (!agent) {
+      throw makeRuntimeError("CapabilityExceeded", "receive target is not a known agent");
+    }
+    const next = agent.inbox.shift() || null;
+    return next ? next.payload : null;
+  },
+
+  pipe(...parts) {
+    if (parts.length === 0) {
+      return null;
+    }
+
+    let acc = parts[0];
+    for (let i = 1; i < parts.length; i += 1) {
+      const part = parts[i];
+      if (typeof part === "function") {
+        acc = part(acc);
+        continue;
+      }
+      if (Array.isArray(acc)) {
+        acc = acc.concat(part);
+        continue;
+      }
+      acc = part;
+    }
+    return acc;
   },
 
   flag(_value, _label) {

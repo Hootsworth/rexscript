@@ -70,6 +70,13 @@ function actionMeta(stmt) {
   }
 }
 
+function indentBlock(block, prefix) {
+  return (block || "")
+    .split("\n")
+    .map((line) => (line ? `${prefix}${line}` : line))
+    .join("\n");
+}
+
 function emitRiskWrapped(ctx, indent, meta, callExpr, assignTo = null) {
   const resultTemp = nextTemp(ctx, "result");
   const loc = meta?.loc ? JSON.stringify(meta.loc) : "null";
@@ -177,7 +184,7 @@ function emitStatement(ctx, stmt, indent = "") {
     }
 
     case "FindStatement": {
-      const sourceExpr = stmt.sourceType === "raw" ? "null" : stmt.source || "null";
+      const sourceExpr = stmt.sourceType === "raw" ? stmt.sourceRaw || "null" : stmt.source || "null";
       return emitRiskWrapped(ctx, indent, meta, `__rex.find(${stmt.selector}, ${sourceExpr})`, stmt.alias);
     }
 
@@ -300,12 +307,19 @@ function emitStatement(ctx, stmt, indent = "") {
         loopBlock = `${indent}let ${attemptTemp} = 0;\n${indent}while (${attemptTemp} < ${stmt.upto}) {\n${indent}  ${attemptTemp}++;\n${attemptBlock}\n${indent}}`;
       }
       
+      let result = loopBlock;
       if (stmt.ensureBody) {
          const ensureCode = stmt.ensureBody.map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
-         const indentedLoop = loopBlock.split('\n').map((l) => l ? '  ' + l : l).join('\n');
-         return `${indent}try {\n${indentedLoop}\n${indent}} finally {\n${ensureCode}\n${indent}}`;
+         const indentedLoop = indentBlock(loopBlock, `${indent}  `);
+         result = `${indent}try {\n${indentedLoop}\n${indent}} finally {\n${ensureCode}\n${indent}}`;
       }
-      return loopBlock;
+
+      const timeoutMs = Number.isFinite(stmt.timeoutMs) ? Number(stmt.timeoutMs) : null;
+      if (timeoutMs && timeoutMs > 0) {
+         const inner = indentBlock(result, `${indent}  `);
+         return `${indent}await __xrisk.withTimeout(async () => {\n${inner}\n${indent}}, ${timeoutMs});`;
+      }
+      return result;
     }
 
     case "VariableDeclaration": {

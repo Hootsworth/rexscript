@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { tokenizeFile, parseFile, analyzeFile, loadPhase1Contracts } from "../src/index.js";
 import { ParserError } from "../src/parser.js";
 
-const compilerRoot = path.resolve(process.cwd());
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const compilerRoot = path.resolve(scriptDir, "..");
 const workspaceRoot = path.resolve(compilerRoot, "..");
 const fixturesRoot = path.resolve(workspaceRoot, "tests/fixtures");
 

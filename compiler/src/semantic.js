@@ -315,9 +315,16 @@ function analyzeStatements(statements, state, inTryBody = false) {
     }
 
     if (stmt.kind === "VariableDeclaration") {
-      const matches = stmt.raw.match(/\$[A-Za-z0-9_]+/g);
-      if (matches) {
-          for (const m of matches) state.variables.add(m);
+      const matches = stmt.raw.match(/\$[A-Za-z0-9_]+/g) || [];
+      const declared = matches[0] || null;
+      const references = declared ? matches.slice(1) : matches;
+      for (const ref of references) {
+        if (!state.variables.has(ref)) {
+          pushDiagnostic(state, "error", "ERR002", `Variable ${ref} used before declaration`, stmt.loc);
+        }
+      }
+      if (declared) {
+        state.variables.add(declared);
       }
       continue;
     }
@@ -441,6 +448,10 @@ function analyzeStatements(statements, state, inTryBody = false) {
         state.variables.add(stmt.outputAlias);
       }
       validateCatchClauses(stmt.catches, state);
+      const starIndex = (stmt.catches || []).findIndex((c) => c.failureType === "*");
+      if (starIndex >= 0 && starIndex !== stmt.catches.length - 1) {
+        pushDiagnostic(state, "error", "ERR008", "fallback * must be the last recovery block", stmt.loc);
+      }
       for (const c of stmt.catches || []) {
         analyzeStatements(c.body || [], state, false);
       }

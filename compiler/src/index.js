@@ -1,17 +1,37 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { tokenize, REX_KEYWORDS, loadKeywordsFromString } from "./lexer.js";
 import { parse } from "./parser.js";
 import { analyze } from "./semantic.js";
 import { generate } from "./codegen.js";
 import { formatDiagnostics } from "./diagnostic-format.js";
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const compilerRoot = path.resolve(moduleDir, "..");
+
+function resolveCompilerContractPath(rootDir, relativePath) {
+  const candidates = [
+    path.resolve(rootDir, relativePath),
+    path.resolve(rootDir, "compiler", relativePath),
+    path.resolve(compilerRoot, relativePath)
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
+}
+
 export function readSource(filePath) {
   return fs.readFileSync(filePath, "utf8");
 }
 
 export function loadKeywords(keywordsPath) {
-  const p = keywordsPath || path.resolve(process.cwd(), "contracts/reserved-keywords.txt");
+  const p = keywordsPath || resolveCompilerContractPath(process.cwd(), "contracts/reserved-keywords.txt");
   if (fs.existsSync(p)) {
     return loadKeywordsFromString(fs.readFileSync(p, "utf8"));
   }
@@ -81,12 +101,12 @@ export function compileString(source, filePath = "snippet.rex", options = {}) {
 }
 
 export function loadPhase1Contracts(rootDir = process.cwd()) {
-  const diagnosticsPath = path.resolve(rootDir, "contracts/diagnostics.json");
-  const astPath = path.resolve(rootDir, "contracts/ast-nodes.json");
+  const diagnosticsPath = resolveCompilerContractPath(rootDir, "contracts/diagnostics.json");
+  const astPath = resolveCompilerContractPath(rootDir, "contracts/ast-nodes.json");
 
   return {
     diagnostics: JSON.parse(fs.readFileSync(diagnosticsPath, "utf8")),
     astContracts: JSON.parse(fs.readFileSync(astPath, "utf8")),
-    keywords: [...loadKeywords(path.resolve(rootDir, "contracts/reserved-keywords.txt"))]
+    keywords: [...loadKeywords(resolveCompilerContractPath(rootDir, "contracts/reserved-keywords.txt"))]
   };
 }

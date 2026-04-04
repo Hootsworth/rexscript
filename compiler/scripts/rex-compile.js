@@ -47,6 +47,11 @@ try {
   }
 
   let code = result.code;
+  if (dryRun) {
+    console.log(`\nDry run complete. Output would be written to ${outPath}`);
+    process.exit(0);
+  }
+
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   if (withMap && result.map) {
     const mapPath = `${outPath}.map`;

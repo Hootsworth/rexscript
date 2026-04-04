@@ -26,8 +26,8 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
   let line = 1;
   let col = 1;
 
-  const push = (type, value, tokenLine, tokenCol) => {
-    tokens.push(createToken(type, value, tokenLine, tokenCol));
+  const push = (type, value, tokenLine, tokenCol, meta = {}) => {
+    tokens.push(createToken(type, value, tokenLine, tokenCol, meta));
   };
 
   while (i < source.length) {
@@ -35,7 +35,7 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
     const twoChar = source.slice(i, i + 2);
 
     if (ch === "\n") {
-      push(TOKEN_TYPES.NEWLINE, "\\n", line, col);
+      push(TOKEN_TYPES.NEWLINE, "\\n", line, col, { start: i, end: i + 1 });
       i += 1;
       line += 1;
       col = 1;
@@ -60,11 +60,34 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       const quote = ch;
       const startLine = line;
       const startCol = col;
+      const startIndex = i;
       let value = quote;
+      let terminated = false;
       i += 1;
       col += 1;
 
-      while (i < source.length && source[i] !== quote) {
+      while (i < source.length) {
+        if (source[i] === "\\") {
+          value += source[i];
+          i += 1;
+          if (i < source.length) {
+            value += source[i];
+            if (source[i] === "\n") {
+              line += 1;
+              col = 1;
+            } else {
+              col += 2;
+            }
+            i += 1;
+          } else {
+            col += 1;
+          }
+          continue;
+        }
+        if (source[i] === quote) {
+          terminated = true;
+          break;
+        }
         value += source[i];
         if (source[i] === "\n") {
           line += 1;
@@ -75,19 +98,24 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
         i += 1;
       }
 
-      if (i < source.length) {
+      if (terminated) {
         value += quote;
         i += 1;
         col += 1;
       }
 
-      push(TOKEN_TYPES.STRING, value, startLine, startCol);
+      push(TOKEN_TYPES.STRING, value, startLine, startCol, {
+        start: startIndex,
+        end: i,
+        terminated
+      });
       continue;
     }
 
     if (ch === "$") {
       const startLine = line;
       const startCol = col;
+      const startIndex = i;
       let value = ch;
       i += 1;
       col += 1;
@@ -96,13 +124,14 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
         i += 1;
         col += 1;
       }
-      push(TOKEN_TYPES.VARIABLE, value, startLine, startCol);
+      push(TOKEN_TYPES.VARIABLE, value, startLine, startCol, { start: startIndex, end: i });
       continue;
     }
 
     if (/[0-9]/.test(ch)) {
       const startLine = line;
       const startCol = col;
+      const startIndex = i;
       let value = ch;
       i += 1;
       col += 1;
@@ -111,13 +140,14 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
         i += 1;
         col += 1;
       }
-      push(TOKEN_TYPES.NUMBER, value, startLine, startCol);
+      push(TOKEN_TYPES.NUMBER, value, startLine, startCol, { start: startIndex, end: i });
       continue;
     }
 
     if (/[A-Za-z_]/.test(ch)) {
       const startLine = line;
       const startCol = col;
+      const startIndex = i;
       let value = ch;
       i += 1;
       col += 1;
@@ -135,27 +165,27 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       }
 
       if (keywords.has(value)) {
-        push(TOKEN_TYPES.KEYWORD, value, startLine, startCol);
+        push(TOKEN_TYPES.KEYWORD, value, startLine, startCol, { start: startIndex, end: i });
       } else {
-        push(TOKEN_TYPES.IDENTIFIER, value, startLine, startCol);
+        push(TOKEN_TYPES.IDENTIFIER, value, startLine, startCol, { start: startIndex, end: i });
       }
       continue;
     }
 
     if (SYMBOLS.has(ch) || ch === "!") {
       if ([">=", "<=", "==", "!="].includes(twoChar)) {
-        push(TOKEN_TYPES.SYMBOL, twoChar, line, col);
+        push(TOKEN_TYPES.SYMBOL, twoChar, line, col, { start: i, end: i + 2 });
         i += 2;
         col += 2;
         continue;
       }
-      push(TOKEN_TYPES.SYMBOL, ch, line, col);
+      push(TOKEN_TYPES.SYMBOL, ch, line, col, { start: i, end: i + 1 });
       i += 1;
       col += 1;
       continue;
     }
 
-    push(TOKEN_TYPES.UNKNOWN, ch, line, col);
+    push(TOKEN_TYPES.UNKNOWN, ch, line, col, { start: i, end: i + 1 });
     i += 1;
     col += 1;
   }

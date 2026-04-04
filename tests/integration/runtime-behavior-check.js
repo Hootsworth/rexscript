@@ -30,6 +30,39 @@ async function checkObserveAndFind() {
   assert(Array.isArray(found.matches) && found.matches.length >= 1, "find should return semantic matches");
 }
 
+async function checkAgentFirstSurface() {
+  const workspace = await runtime.workspaceStart("agent-lab");
+  assert(workspace.name === "agent-lab", "workspaceStart should preserve workspace name");
+
+  runtime.registerTool("echo_tool", async (input) => ({ echoed: input }));
+  const equipResult = await runtime.equip("echo_tool");
+  assert(equipResult.equipped === true, "equip should acknowledge registered tools");
+
+  const agent = await runtime.spawn("worker", { priority: "high" });
+  assert(agent.type === "worker", "spawn should preserve agent type");
+
+  const sendResult = await runtime.send({ task: "collect" }, agent);
+  assert(sendResult.delivered === true, "send should enqueue payloads");
+
+  const received = await runtime.receive(agent);
+  assert(received?.task === "collect", "receive should dequeue previously sent payloads");
+
+  const assessResult = await runtime.assess(
+    { content: "This page seems blocked and unreliable", confidence: 0.2 },
+    ["blocked", "seems_unreliable"]
+  );
+  assert(
+    assessResult === "blocked" || assessResult === "seems_unreliable",
+    "assess should select an available matching condition"
+  );
+
+  const pipeResult = runtime.pipe([1], [2], [3]);
+  assert(Array.isArray(pipeResult) && pipeResult.length === 3, "pipe should compose array values");
+
+  const closed = await runtime.workspaceEnd();
+  assert(closed?.name === "agent-lab", "workspaceEnd should close the active workspace");
+}
+
 async function checkSessionClosedGuard() {
   const s = await runtime.session({ id: "integration-session" });
   s.close();
@@ -364,6 +397,7 @@ async function checkUseInsteadLanguagePolicy() {
 
 async function main() {
   await checkObserveAndFind();
+  await checkAgentFirstSurface();
   await checkSessionClosedGuard();
   await checkMemoryOverflow();
   await checkUseInsteadExecutors();
