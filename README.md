@@ -1,262 +1,145 @@
-# RexScript
+<div align="center">
+  <img src="https://img.shields.io/badge/RexScript-v1.0.0_Stable-00e59b?style=for-the-badge&logo=codeigniter&logoColor=black" alt="RexScript v1.0.0 Stable" />
+  <h1>The Programming Language for Autonomous Agents</h1>
+  <p>
+    <strong>Deterministic semantics • Policy-aware runtime • Edge-native execution</strong>
+  </p>
+  <p>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-teal.svg?style=flat-square" alt="License: MIT"></a>
+    <a href="#quick-start"><img src="https://img.shields.io/badge/Getting_Started-Build_an_Agent-blue?style=flat-square" alt="Getting Started"></a>
+  </p>
+</div>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.0.0--stable-brightgreen.svg)]()
+<br />
 
-> "Because autonomous agents don't browse. They hunt."
+> **“Because autonomous agents don't browse. They hunt.”**
 
-**RexScript (v1.0.0 Stable)** is the first programming language designed fundamentally for AI agents. It drops DOM APIs and NodeJS servers, replacing standard JavaScript runtime bounds with **semantic primitives designed natively around LLMs.**
-## Table Of Contents
+**RexScript** strips away the DOM APIs and server-side bloat of traditional JavaScript, replacing them with mathematically deterministic **semantic primitives designed natively around Large Language Models (LLMs)**. It operates in heavy-tail probabilistic environments (the internet) securely and reliably.
 
-- [What You Get](#what-you-get)
-- [Requirements](#requirements)
-- [Install](#install)
-- [Quick Start](#quick-start)
-- [Language Examples](#language-examples)
-- [CLI Reference](#cli-reference)
-- [Runtime Policy Controls](#runtime-policy-controls)
-- [Tracing And Audit Artifacts](#tracing-and-audit-artifacts)
-- [Validation Commands](#validation-commands)
-- [Production Readiness Checklist](#production-readiness-checklist)
-- [Repository Layout](#repository-layout)
-- [Troubleshooting](#troubleshooting)
+## 🌟 Why RexScript?
 
-## What You Get
+Traditional languages were built for deterministic inputs. Agents operate on probabilistic inputs. RexScript bridges this gap by enforcing risk boundaries, sandbox executions, and trace-logging strictly at compile time.
 
-- **Edge Compatibility**: Execute Rex lexing serverlessly natively on Cloudflare Workers and Next.js Edge.
-- **VSCode Diagnostics**: Native language server providing static analysis line/column JSON traces.
-- **Web Playground**: Sleek React/Vite-styled testing environment connecting through local web sockets.
-- **Strict Linting Engine**: `npm run rex:lint` transforms low-confidence validation bindings natively into fatal exit traps.
-- **Zero Trust Security Vaults**: Sandbox `docker`/`strict` and `vault("API_KEY")` natively bound securely in memory.
-- `use.instead` adapters with confidence, policy, and trace metadata
-- Compile-time and runtime trace artifacts suitable for auditing
+- **Zero-Trust Execution (`security`)**: Natively define isolation perimeters (e.g., `sandbox "docker" lockdown strict`).
+- **Probabilistic Error Handling (`attempt / recover`)**: Elegantly handle non-deterministic LLM failures natively without thousands of try-catch blocks.
+- **Edge-Ready Pipeline (`compileString`)**: The compiler is totally abstracted from NodeJS built-ins. Lex and parse your agents securely in Next.js Serverless Edge or Cloudflare Workers.
+- **Native Data Vaults (`vault()`)**: Hardcode secret aliases directly in code. RexScript physically injects them into process memory dynamically via the `__xrisk` engine—keeping API keys entirely out of telemetry traces.
+- **Strict Linting Engine (`rex:lint`)**: Forces all probabilistic warnings (`Code: WARNXXX`) into exit-code `2` failures, mathematically securing your codebase across GitHub Actions and CI platforms.
 
-Core implementation paths:
+---
 
-- `compiler/src/parser.js`
-- `compiler/src/semantic.js`
-- `compiler/src/codegen.js`
-- `packages/runtime/index.js`
-- `packages/xrisk/index.js`
-- `tests/integration`
-
-## Requirements
-
-- Node.js 20+ (recommended)
-- npm 10+
-- Optional for some adapters:
-  - Python 3 for `use.instead:python`
-  - Playwright runtime for browser adapter mode
-
-## Install
+## ⚡ Quick Start
 
 ```bash
-cd rexscript/compiler
-npm install
+# Clone the repository
+git clone https://github.com/Hootsworth/rexscript.git
+cd rexscript
+
+# Install dependencies (Node.js 20+ Recommended)
+cd compiler && npm install
+npm run -s rex:compile -- ../tests/fixtures/valid/when_use_instead.rex out.js
 ```
 
-## Quick Start
-
+### The Web Playground
+We ship a highly-aesthetic React/Express playground for testing Agent hunts live:
 ```bash
-cd rexscript/compiler
-
-npm run -s rex:check -- ../tests/fixtures/valid/when_use_instead.rex
-npm run -s rex:compile -- ../tests/fixtures/valid/when_use_instead.rex ./.rex-run/quickstart.js default --map
-npm run -s rex:run -- ../tests/fixtures/valid/when_use_instead.rex default --trace-out ../tests/integration/quickstart.runtime.trace.json
-npm run -s rex:trace -- ../tests/fixtures/valid/when_use_instead.rex ../tests/integration/quickstart.plan.trace.json default
-```
-
-## Language Examples
-
-### Guarded execution with `expect` / `otherwise`
-
-```rex
-expect {
-  observe page "https://example.com/data" as $page
-
-  when $page is loaded {
-    find "Latest headlines" in $page as $headlines
-    synthesise [$page, $headlines] as $summary
-  } otherwise {
-    flag $page as unavailable
-    skip
-  }
-} otherwise * {
-  emit { action: "fallback" }
-  skip
-}
-```
-
-### `use.instead` with fallback behavior
-
-```rex
-expect {
-  use.instead:sql as $rows {
-    SELECT id, title FROM posts LIMIT 5
-  } catch QueryFailed {
-    use default []
-  }
-
-  synthesise [$rows] as $report
-} otherwise * {
-  emit { action: "fallback" }
-  skip
-}
-```
-
-### Session-oriented navigation flow
-
-```rex
-expect {
-  session as $s
-  observe page "https://example.com" with session $s as $home
-  navigate to "https://example.com/docs" with session $s as $docs
-  navigate back with session $s
-  close session $s
-} otherwise * {
-  skip
-}
-```
-
-## CLI Reference
-
-Run from `rexscript/compiler`.
-
-### Core Commands
-
-- `npm run -s rex:check -- <file.rex> [default|strict|dynamic]`
-- `npm run -s rex:compile -- <file.rex> [out.js] [default|strict|dynamic] [--map]`
-- `npm run -s rex:run -- <file.rex> [default|strict|dynamic] [--dry-run] [--trace-out <file.json>]`
-- `npm run -s rex:trace -- <file.rex> [out.json] [default|strict|dynamic]`
-
-### Key Integration Gates
-
-- `npm run -s integration:phase3`
-- `npm run -s integration:phase-b`
-- `npm run -s integration:phase-d`
-- `npm run -s integration:dynamic-feature-lifecycle`
-- `npm run -s integration:phase5-policy-gate-stress`
-- `npm run -s integration:full-validation`
-
-## Runtime Policy Controls
-
-RexScript runtime behavior is controlled through environment variables.
-
-### Capability and foreign execution
-
-- `REX_ALLOWED_CAPABILITIES`
-- `REX_ALLOWED_USE_INSTEAD_LANGS`
-- `REX_USE_INSTEAD_STRICT_EXECUTORS`
-
-### Browser adapter behavior
-
-- `REX_RUNTIME_BROWSER_ADAPTER` (`auto`, `playwright`, `fetch`)
-- `REX_RUNTIME_BROWSER_ADAPTER_STRICT`
-- `REX_RUNTIME_PLAYWRIGHT_DISABLE`
-
-### Bash / GraphQL adapter controls
-
-- `REX_BASH_EXECUTOR_ENABLE`
-- `REX_BASH_ALLOWED_COMMANDS`
-- `REX_GRAPHQL_ENDPOINT`
-- `REX_GRAPHQL_ALLOWED_ENDPOINTS`
-- `REX_GRAPHQL_TIMEOUT_MS`
-
-## Tracing And Audit Artifacts
-
-RexScript can generate two trace artifacts:
-
-- Plan trace (compiler-side): deterministic action plan
-- Runtime trace (execution-side): real action outcomes, policy decisions, diagnostics
-
-Typical runtime trace fields:
-
-- `traceId`, `sessionId`, `generatedAt`
-- `actions[]` with action metadata, risk, policy, duration, location
-- `diagnostics` (warnings, errors)
-
-Reference paths:
-
-- `compiler/src/trace-plan.js`
-- `tests/integration/trace.schema.json`
-- `tests/integration/validate-trace-schema.js`
-
-## Validation Commands
-
-Recommended complete verification:
-
-```bash
-cd rexscript/compiler
-npm run -s integration:full-validation
-```
-
-Expanded explicit chain:
-
-```bash
-cd rexscript/compiler
-npm run -s phase1:smoke && \
-  npm run -s codegen:snapshots && \
-  npm run -s integration:phase3 && \
-  npm run -s integration:host-js-boundary && \
-  npm run -s integration:compiler-policy && \
-  npm run -s integration:recovery-sourcemap && \
-  npm run -s integration:rosetta-detection && \
-  npm run -s integration:phase-b && \
-  npm run -s integration:diagnostic-format && \
-  npm run -s integration:phase-d && \
-  npm run -s integration:dynamic-feature-lifecycle && \
-  npm run -s integration:phase5-policy-gate-stress
-```
-
-## Production Readiness Checklist
-
-Use this checklist before shipping:
-
-1. Run `integration:full-validation` and ensure zero failures.
-2. Verify policy allowlists for your target environment.
-3. Persist runtime traces and monitor diagnostics.
-4. Lock adapter behavior (`REX_RUNTIME_BROWSER_ADAPTER`) for deterministic runtime behavior.
-5. Restrict `use.instead` language surface to required executors only.
-6. Pin package versions and enforce reproducible build scripts.
-7. Validate dynamic lifecycle gates if using dynamic mode.
-
-## Repository Layout
-
-- `compiler`: lexer/parser/semantic/codegen + CLI scripts
-- `packages/runtime`: runtime primitives and `use.instead` adapters
-- `packages/xrisk`: runtime policy and trace sink
-- `packages/rosetta`: language detection and confidence scoring
-- `tests/fixtures`: valid/invalid/warning fixture corpus
-- `tests/integration`: integration and regression checks
-- `docs`: engineering notes and roadmap docs
-
-## Troubleshooting
-
-### `BrowserAdapterUnavailable`
-
-- Install Playwright dependencies, or set:
-
-```bash
-export REX_RUNTIME_BROWSER_ADAPTER=fetch
-```
-
-### `ForeignExecutionDenied`
-
-- Review language and capability allowlists:
-
-```bash
-export REX_ALLOWED_USE_INSTEAD_LANGS=sql,regex
-export REX_ALLOWED_CAPABILITIES=NETWORK,FOREIGN_EXEC,NONE
-```
-
-### `MemoryOverflow`
-
-- Ensure memory cleanup where appropriate:
-
-```rex
-forget ["*"]
+cd packages/playground
+npm install && npm start
+# Go to http://localhost:3000
 ```
 
 ---
 
-RexScript is designed for controlled agent execution where auditability, policy compliance, and deterministic runtime behavior are first-class constraints.
+## 📖 Language Primitives
+
+RexScript provides native keywords exclusively built for AI logic. 
+
+### 1. Guarded Operations & LLM Synthesis
+Execute web actions securely using fallback recovery blocks.
+```rex
+goal "Audit Web Data" {
+  attempt {
+    hunt page "https://example.com/data" as $page;
+    synthesise [$page] as $summary;
+  } recover Timeout {
+    telemetry { exporter "console" }
+  } otherwise * {
+    skip
+  }
+}
+```
+
+### 2. Zero-Trust Sandbox Isolation
+Explicitly block `use.instead` bash arrays and remote macros without invoking a physical execution perimeter.
+```rex
+security {
+    sandbox "docker"
+    lockdown strict
+}
+
+use.instead:python as $rows {
+    import os
+    print("Locked Down")
+}
+```
+
+### 3. State memory
+Pass facts probabilistically without polluting process memory natively.
+```rex
+memory {
+    remember $summary as "latest-summary"
+}
+```
+
+---
+
+## 🛠️ CLI Reference
+
+RexScript’s CLI is blazing fast and handles compiling, tracing, and static validation natively.
+
+```bash
+# Compile to safe execution sandbox
+npm run -s rex:compile -- <file.rex> [out.js] [default|strict|dynamic]
+
+# Catch warnings using Live Diagnostics JSON Output (For VSCode Extension)
+npm run -s rex:check -- <file.rex> default --json
+
+# Strict validation (Ideal for CI/CD Github Actions)
+npm run -s rex:lint -- <file.rex>
+
+# Trace execution plans natively
+npm run -s rex:trace -- <file.rex> plan.json
+```
+
+---
+
+## 🏗️ Architecture Layout
+
+RexScript is organized into modular packages ensuring the Compiler never bleeds into the Runtime adapters.
+
+| Directory | Purpose |
+| --- | --- |
+| `compiler/src/` | Lexer, Parser, Semantic Analyzer, and CodeGen logic. |
+| `packages/runtime/` | Standard library adapters (`__rex`) executing compiled primitives. |
+| `packages/xrisk/` | The security perimeter. Handles policy gates, `vault`, and sandboxes. |
+| `packages/playground/` | The Web Engine. A WebSockets server testing LLM hunts visually. |
+| `extensions/vscode/` | Visual Studio Code native language support providing line-by-line syntax hinting natively hooking `rex:check --json`! |
+
+---
+
+## 🛡️ Production Readiness Checklist
+
+Before you ship your Autonomous Agent built on RexScript, verify the following bounds:
+
+- [ ] **Run Linting**: Run `npm run rex:lint` and ensure **zero** failures.
+- [ ] **Lock Dependencies**: Pin your node packages statically to prevent supply-chain poisoning.
+- [ ] **Enforce Capabilities**: Restrict your production capability flag: `export REX_ALLOWED_CAPABILITIES=NETWORK,FOREIGN_EXEC`.
+- [ ] **Verify E2E Tests**: Use `npx playwright test` to ensure web interfaces function under execution traces perfectly.
+
+## 📄 License & Contributing
+
+RexScript is licensed under the MIT License. To contribute, submit PRs specifically hitting the `tests/integration/` spec files to prove semantic deterministic compilation.
+
+<div align="center">
+  <sub>Built by engineers focused on alignment and autonomy natively.</sub>
+</div>
