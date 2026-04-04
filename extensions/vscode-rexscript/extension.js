@@ -4,6 +4,46 @@ const cp = require("node:child_process");
 const vscode = require("vscode");
 
 const OUTPUT = vscode.window.createOutputChannel("RexScript");
+const diagnosticCollection = vscode.languages.createDiagnosticCollection("rexscript");
+
+function updateDiagnostics(document) {
+  if (!document.fileName.endsWith(".rex")) return;
+  const compilerDir = findCompilerDir();
+  if (!compilerDir) return;
+  
+  const filePath = document.uri.fsPath;
+  cp.exec(`${npmExecutable()} run rex:check -- "${filePath}" default --json`, { cwd: compilerDir }, (err, stdout) => {
+      try {
+          // extract JSON output from stdout, as npm might prepend things in stdout before the raw JSON starts
+          const jsonStart = stdout.indexOf('{');
+          if (jsonStart === -1) {
+              diagnosticCollection.set(document.uri, []);
+              return;
+          }
+          const rawJson = stdout.substring(jsonStart);
+          const result = JSON.parse(rawJson);
+          const diagnostics = [];
+          
+          const processItems = (items, severity) => {
+             for (const item of (items || [])) {
+                const loc = item.loc || { line: 1, column: 1 };
+                const line = Math.max(0, loc.line - 1);
+                const col = Math.max(0, loc.column - 1);
+                const range = new vscode.Range(line, col, line, col + 1); 
+                const diag = new vscode.Diagnostic(range, `[${item.code}] ${item.message}`, severity);
+                diagnostics.push(diag);
+             }
+          };
+
+          processItems(result.errors, vscode.DiagnosticSeverity.Error);
+          processItems(result.warnings, vscode.DiagnosticSeverity.Warning);
+
+          diagnosticCollection.set(document.uri, diagnostics);
+      } catch (e) {
+          // silent error on bad parse
+      }
+  });
+}
 
 function npmExecutable() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
@@ -129,6 +169,15 @@ function register(context, command, callback) {
 
 function activate(context) {
   context.subscriptions.push(OUTPUT);
+  context.subscriptions.push(diagnosticCollection);
+
+  vscode.workspace.onDidSaveTextDocument(updateDiagnostics, null, context.subscriptions);
+  vscode.workspace.onDidOpenTextDocument(updateDiagnostics, null, context.subscriptions);
+
+  // Run on all currently open files
+  if (vscode.window.activeTextEditor) {
+      updateDiagnostics(vscode.window.activeTextEditor.document);
+  }
 
   register(context, "rexscript.check", () => runRexCommand("rex:check"));
   register(context, "rexscript.compile", () => runRexCommand("rex:compile"));

@@ -16,6 +16,7 @@
     "rex:run": "node ./scripts/rex-run.js",
     "rex:trace": "node ./scripts/rex-trace.js",
     "rex:replay": "node ./bin/rex-replay.js",
+    "rex:lint": "node ./scripts/rex-lint.js",
     "codegen:snapshots": "node ./scripts/codegen-snapshots.js",
     "codegen:snapshots:update": "node ./scripts/codegen-snapshots.js --update",
     "integration:run": "bash ../tests/integration/compile-run-trace.sh",

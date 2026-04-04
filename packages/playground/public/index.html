@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RexScript Playground</title>
+    <link rel="stylesheet" href="/index.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo">
+                <span class="logo-icon">🦖</span>
+                <span class="logo-text">RexScript <b>Playground</b></span>
+            </div>
+            <div class="actions">
+                <button id="runBtn" class="btn primary">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 3l14 9-14 9V3z" fill="currentColor"/>
+                    </svg>
+                    Hunt
+                </button>
+                <button id="clearBtn" class="btn secondary">Clear Output</button>
+            </div>
+        </header>
+        <main class="workspace">
+            <div class="pane editor-pane">
+                <div class="pane-header">Source Code <span>(playground.rex)</span></div>
+                <textarea id="editor" spellcheck="false" autocomplete="off">
+// Welcome to RexScript.
+// Agents don't browse. They hunt.
+
+goal "Find out what RexScript is" constraint { budget < 0.10 } {
+  attempt {
+      hunt page "https://github.com" as $content;
+      synthesise [$content] as $summary;
+  } recover Timeout {
+      telemetry {
+          exporter "console"
+          endpoint "local"
+      }
+  }
+}
+</textarea>
+            </div>
+            <div class="pane terminal-pane">
+                <div class="pane-header">Agent Uplink <span>(stdout)</span></div>
+                <div id="terminal" class="terminal-content"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        const terminal = document.getElementById('terminal');
+        const editor = document.getElementById('editor');
+        const runBtn = document.getElementById('runBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        function appendToTerminal(text, type = 'normal') {
+            const span = document.createElement('span');
+            span.className = type;
+            
+            // Basic ANSI color stripping for HTML rendering (for now just replacing newlines)
+            let formatted = text.replace(/\x1b\[[0-9;]*m/g, ''); 
+            formatted = formatted.replace(/>/g, '&gt;').replace(/</g, '&lt;');
+            
+            span.innerHTML = formatted.replace(/\n/g, '<br/>');
+            terminal.appendChild(span);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        ws.onopen = () => {
+            appendToTerminal('[Connected to Runtime Engine]\n\n', 'system');
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'output') {
+                appendToTerminal(msg.data, 'output');
+            } else if (msg.type === 'error') {
+                appendToTerminal(msg.data, 'error');
+            } else if (msg.type === 'exit') {
+                appendToTerminal(`\n[Process exited with code ${msg.code}]\n\n`, 'system');
+                runBtn.disabled = false;
+                runBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3l14 9-14 9V3z" fill="currentColor"/></svg> Hunt`;
+            }
+        };
+
+        runBtn.addEventListener('click', () => {
+            runBtn.disabled = true;
+            runBtn.innerHTML = 'Hunting...';
+            ws.send(JSON.stringify({ type: 'RUN_SCRIPT', code: editor.value }));
+        });
+
+        clearBtn.addEventListener('click', () => {
+            terminal.innerHTML = '';
+        });
+    </script>
+</body>
+</html>
