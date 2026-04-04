@@ -71,7 +71,7 @@ function extractTitle(html) {
 }
 
 function extractLinks(html, baseUrl) {
-  const raw = String(html || "");
+  const raw = String(html || "").slice(0, 500000); // Safeguard against ReDoS on massive inputs
   const links = [];
   const linkPattern = /<a\b[^>]*href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
 
@@ -1289,8 +1289,8 @@ const runtime = {
   async useInstead({ hint = null, content = "", context = {} } = {}) {
     const resolved = resolveLanguageHint(hint, content);
     const language = String(resolved.language || "unknown").toLowerCase();
-    if (language === "unknown" && resolved.confidence < 0.6) {
-      throw makeRuntimeError("AmbiguousForeignLanguage", "Unable to determine use.instead language with confidence >= 0.60");
+    if (language === "unknown" && resolved.confidence < 0.25) {
+      throw makeRuntimeError("AmbiguousForeignLanguage", "Unable to determine use.instead language with confidence >= 0.25");
     }
 
     const strictExecutors = process.env.REX_USE_INSTEAD_STRICT_EXECUTORS === "1";

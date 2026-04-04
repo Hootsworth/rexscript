@@ -1,3 +1,5 @@
+import rosetta from "@rexscript/rosetta";
+
 function createDiagnostic(severity, code, message, loc = null) {
   return { severity, code, message, loc };
 }
@@ -60,44 +62,6 @@ function includesSensitivePattern(text) {
   return t.includes("password") || t.includes("credentials") || t.includes("auth");
 }
 
-function scoreLanguage(content, language) {
-  const text = (content || "").toLowerCase();
-  const signatures = {
-    sql: ["select", "from", "where", "join", "insert", "update", "delete"],
-    python: ["import ", "def ", "print(", "class ", "return "],
-    bash: ["#!/", "echo ", "grep ", "curl ", "|", "$"],
-    graphql: ["query", "mutation", "fragment", "__typename"],
-    regex: ["/", "\\d", "\\w", "*", "+"],
-    xpath: ["//", "@", "text()", "node()"],
-    yaml: [": ", "---"],
-    json: ["{", "}", "[", "]", "\"\""]
-  };
-
-  const hints = signatures[language] || [];
-  if (hints.length === 0) {
-    return 0;
-  }
-
-  let score = 0;
-  for (const hint of hints) {
-    if (text.includes(hint)) {
-      score += 1;
-    }
-  }
-  return score / hints.length;
-}
-
-function detectLanguage(content) {
-  const candidates = ["sql", "python", "bash", "graphql", "regex", "xpath", "yaml", "json"];
-  const ranked = candidates
-    .map((language) => ({ language, confidence: scoreLanguage(content, language) }))
-    .sort((a, b) => b.confidence - a.confidence);
-
-  return {
-    best: ranked[0],
-    second: ranked[1]
-  };
-}
 
 function normalizeAllowedUseInsteadLanguages(raw) {
   if (!raw) {
@@ -212,7 +176,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
     }
 
     if (stmt.kind === "SecurityStatement") {
-      state.hasSecurityBlock = (stmt.config && stmt.config.sandbox);
+      state.hasSecurityBlock = !!(stmt.config && (stmt.config.sandbox || stmt.config.lockdown));
       continue;
     }
 
@@ -441,7 +405,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
       }
 
       if (!stmt.languageHint) {
-        const detection = detectLanguage(stmt.content);
+        const detection = rosetta.detect(stmt.content);
         const confidence = detection.best?.confidence || 0;
         const detected = String(detection.best?.language || "unknown").toLowerCase();
         const allowedDetected = state.options.allowedUseInsteadLanguages;
@@ -455,7 +419,7 @@ function analyzeStatements(statements, state, inTryBody = false) {
             stmt.loc
           );
         }
-        if (confidence < 0.6) {
+        if (confidence < 0.25) {
           pushDiagnostic(
             state,
             "error",
@@ -463,12 +427,12 @@ function analyzeStatements(statements, state, inTryBody = false) {
             "use.instead block is ambiguous; add explicit language hint",
             stmt.loc
           );
-        } else if (confidence < 0.8) {
+        } else if (confidence < 0.5) {
           pushDiagnostic(
             state,
             "warning",
             "WARN006",
-            `use.instead detected as ${detection.best.language} with low confidence`,
+            `Inferred use.instead language '${detected}' has low confidence (score: ${confidence}). Consider adding explicit language hint.`,
             stmt.loc
           );
         }

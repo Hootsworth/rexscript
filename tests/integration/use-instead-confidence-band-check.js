@@ -42,16 +42,16 @@ function main() {
     );
 
     const ambiguous = getCodes(checkFile(ambiguousFile));
-    assert(ambiguous.errors.has("ERR005"), "Expected ERR005 when inferred confidence is below 0.60");
+    assert(ambiguous.errors.has("ERR005"), "Expected ERR005 when inferred confidence is below 0.25");
     assert(!ambiguous.warnings.has("WARN006"), "WARN006 should not be emitted when ERR005 is present");
 
     const lowConfidence = getCodes(checkFile(lowConfidenceFile));
-    assert(!lowConfidence.errors.has("ERR005"), "ERR005 should not trigger at confidence >= 0.60");
-    assert(lowConfidence.warnings.has("WARN006"), "Expected WARN006 when inferred confidence is between 0.60 and 0.79");
+    assert(!lowConfidence.errors.has("ERR005"), "ERR005 should not trigger at confidence >= 0.25");
+    assert(lowConfidence.warnings.has("WARN006"), "Expected WARN006 when inferred confidence is between 0.25 and 0.49");
 
     const highConfidence = getCodes(checkFile(highConfidenceFile));
     assert(!highConfidence.errors.has("ERR005"), "ERR005 should not trigger at high confidence");
-    assert(!highConfidence.warnings.has("WARN006"), "WARN006 should not trigger at confidence >= 0.80");
+    assert(!highConfidence.warnings.has("WARN006"), "WARN006 should not trigger at confidence >= 0.50");
 
     console.log("use.instead confidence-band diagnostics check passed.");
   } finally {

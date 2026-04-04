@@ -113,11 +113,19 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       let value = ch;
       i += 1;
       col += 1;
-      while (i < source.length && /[A-Za-z0-9_.]/.test(source[i])) {
+      while (i < source.length && /[A-Za-z0-9_]/.test(source[i])) {
         value += source[i];
         i += 1;
         col += 1;
       }
+
+      // Special case: use.instead
+      if (value === "use" && source[i] === "." && source.slice(i + 1, i + 8) === "instead") {
+        value = "use.instead";
+        i += 8;
+        col += 8;
+      }
+
       if (keywords.has(value)) {
         push(TOKEN_TYPES.KEYWORD, value, startLine, startCol);
       } else {
@@ -126,7 +134,7 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       continue;
     }
 
-    if (SYMBOLS.has(ch)) {
+    if (SYMBOLS.has(ch) || ch === "!") {
       if ([">=", "<=", "==", "!="].includes(twoChar)) {
         push(TOKEN_TYPES.SYMBOL, twoChar, line, col);
         i += 2;
