@@ -1,7 +1,7 @@
 import { TOKEN_TYPES, SYMBOLS, createToken } from "./tokens.js";
 export const REX_KEYWORDS = new Set([
   "goal", "constraint", "expect", "otherwise", "telemetry", "metric", "span", "trace_id",
-  "synthesise", "hunt", "assess", "evaluate", "use.instead", "system", "workspace",
+  "synthesise", "hunt", "assess", "evaluate", "use.instead", "system", "workspace", "plan", "step",
   "tool", "equip", "memory", "remember", "forget", "recall", "clear", "parallel",
   "distributed", "session", "close", "restart", "with", "as", "then", "timeout",
   "spawn", "send", "receive", "from", "to", "security", "vault", "sandbox", "lockdown", "strict",

@@ -23,7 +23,7 @@
       "patterns": [
         {
           "name": "keyword.control.rexscript",
-          "match": "\\b(expect|otherwise|try|catch|when|parallel|retry|skip|use\\.instead|use|default)\\b"
+          "match": "\\b(expect|otherwise|try|catch|when|parallel|retry|skip|use\\.instead|use|default|plan|step)\\b"
         },
         {
           "name": "keyword.other.rexscript",

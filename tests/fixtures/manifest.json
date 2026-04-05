@@ -36,6 +36,10 @@
     {
       "file": "valid/goal_constraints.rex",
       "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/plan_step_flow.rex",
+      "expect": "parse+semantic pass"
     }
   ],
   "invalid": [

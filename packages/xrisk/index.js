@@ -4,6 +4,9 @@ import path from "node:path";
 const __pending = [];
 const __actions = [];
 const __goalStack = [];
+const __planStack = [];
+const __planSummaries = [];
+const __stepStack = [];
 const __runtimeConfig = {
   security: null,
   telemetry: null
@@ -301,9 +304,11 @@ function createTraceEnvelope() {
     file: process.env.REX_SOURCE_FILE || null,
     generatedAt: nowIso(),
     actionCount: __actions.length,
+    planCount: __planSummaries.length,
     duration,
     haiku: buildHaiku(`${traceId}:${__sessionId}:${__actions.length}`),
     actions: __actions,
+    plans: __planSummaries,
     diagnostics: __diagnostics
   };
 }
@@ -366,6 +371,120 @@ const xrisk = {
         constraints: goal?.constraints || null
       }),
       loc: goal?.loc || null
+    });
+    return { ended: true };
+  },
+
+  async planStart(name = null, loc = null) {
+    const startedAt = Date.now();
+    const timestamp = nowIso();
+    const plan = {
+      name,
+      loc: loc || null,
+      startedAt,
+      timestamp,
+      steps: []
+    };
+    __planStack.push(plan);
+    __actions.push({
+      action: "plan_start",
+      kind: "plan_start",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: name,
+      xriskDecision: "ALLOW",
+      timestamp,
+      duration: 0,
+      haiku: buildHaiku(`plan_start:${name || "unknown"}:${__actions.length}`),
+      result: summarizeResult({ name }),
+      loc: loc || null
+    });
+    return { started: true };
+  },
+
+  async planEnd() {
+    const plan = __planStack.pop() || null;
+    const endedAt = Date.now();
+    const duration = plan ? Math.max(0, endedAt - plan.startedAt) : 0;
+    if (plan) {
+      __planSummaries.push({
+        name: plan.name,
+        loc: plan.loc || null,
+        startedAt: plan.timestamp,
+        endedAt: nowIso(),
+        duration,
+        steps: plan.steps
+      });
+    }
+    __actions.push({
+      action: "plan_end",
+      kind: "plan_end",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: plan?.name || null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration,
+      haiku: buildHaiku(`plan_end:${plan?.name || "unknown"}:${__actions.length}`),
+      result: summarizeResult({ name: plan?.name || null, stepCount: plan?.steps?.length || 0 }),
+      loc: plan?.loc || null
+    });
+    return { ended: true };
+  },
+
+  async stepStart(title = null, loc = null) {
+    const startedAt = Date.now();
+    const timestamp = nowIso();
+    const activePlan = __planStack[__planStack.length - 1] || null;
+    const step = {
+      title,
+      loc: loc || null,
+      startedAt,
+      timestamp,
+      completed: false
+    };
+    if (activePlan) {
+      activePlan.steps.push(step);
+    }
+    __stepStack.push(step);
+    __actions.push({
+      action: "step_start",
+      kind: "step_start",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: title,
+      xriskDecision: "ALLOW",
+      timestamp,
+      duration: 0,
+      haiku: buildHaiku(`step_start:${title || "unknown"}:${__actions.length}`),
+      result: summarizeResult({ title, plan: activePlan?.name || null }),
+      loc: loc || null
+    });
+    return { started: true };
+  },
+
+  async stepEnd() {
+    const activePlan = __planStack[__planStack.length - 1] || null;
+    const step = __stepStack.pop() || null;
+    const endedAt = Date.now();
+    const duration = step ? Math.max(0, endedAt - step.startedAt) : 0;
+    if (step) {
+      step.completed = true;
+      step.endedAt = nowIso();
+      step.duration = duration;
+    }
+    __actions.push({
+      action: "step_end",
+      kind: "step_end",
+      riskLevel: "LOW",
+      capability: "NONE",
+      target: step?.title || null,
+      xriskDecision: "ALLOW",
+      timestamp: nowIso(),
+      duration,
+      haiku: buildHaiku(`step_end:${step?.title || "unknown"}:${__actions.length}`),
+      result: summarizeResult({ title: step?.title || null, plan: activePlan?.name || null }),
+      loc: step?.loc || null
     });
     return { ended: true };
   },
@@ -559,6 +678,9 @@ const xrisk = {
     __pending.length = 0;
     __actions.length = 0;
     __goalStack.length = 0;
+    __planStack.length = 0;
+    __planSummaries.length = 0;
+    __stepStack.length = 0;
     __runtimeConfig.security = null;
     __runtimeConfig.telemetry = null;
     __diagnostics.errors.length = 0;

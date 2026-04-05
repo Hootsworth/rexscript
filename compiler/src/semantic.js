@@ -342,6 +342,16 @@ function analyzeStatements(statements, state, inTryBody = false) {
       continue;
     }
 
+    if (stmt.kind === "PlanStatement") {
+      analyzeStatements(stmt.steps || [], state, false);
+      continue;
+    }
+
+    if (stmt.kind === "StepStatement") {
+      analyzeStatements(stmt.body || [], state, false);
+      continue;
+    }
+
     if (stmt.kind === "RationaleStatement") {
       continue;
     }

@@ -40,6 +40,8 @@ function capabilityForAction(stmt) {
 
 function actionName(stmt) {
   switch (stmt.kind) {
+    case "PlanStatement": return "plan";
+    case "StepStatement": return "step";
     case "ObserveStatement": return stmt.verb === "hunt" ? "hunt" : "observe";
     case "NavigateStatement": return "navigate";
     case "FindStatement": return "find";
@@ -89,6 +91,8 @@ function deterministicDurationMs(stmt, index) {
 }
 
 function targetForAction(stmt) {
+  if (stmt.kind === "PlanStatement") return stmt.name || null;
+  if (stmt.kind === "StepStatement") return stmt.title || null;
   if (stmt.kind === "ObserveStatement") return stmt.url?.value || null;
   if (stmt.kind === "NavigateStatement") return stmt.url?.value || stmt.direction || null;
   if (stmt.kind === "FindStatement") return stmt.selector || null;
@@ -117,6 +121,16 @@ function walkStatements(statements, out) {
       haiku: buildHaiku(seedText),
       loc: stmt.loc || null
     });
+
+    if (stmt.kind === "PlanStatement") {
+      walkStatements(stmt.steps || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "StepStatement") {
+      walkStatements(stmt.body || [], out);
+      continue;
+    }
 
     if (stmt.kind === "TryCatchStatement") {
       walkStatements(stmt.body || [], out);
@@ -148,9 +162,65 @@ function walkStatements(statements, out) {
   }
 }
 
+function collectPlans(statements, out) {
+  for (const stmt of statements || []) {
+    if (!stmt || !stmt.kind) {
+      continue;
+    }
+
+    if (stmt.kind === "PlanStatement") {
+      out.push({
+        name: stmt.name,
+        loc: stmt.loc || null,
+        steps: (stmt.steps || []).map((step, index) => ({
+          index: index + 1,
+          title: step.title,
+          loc: step.loc || null,
+          actionCount: (step.body || []).length
+        }))
+      });
+      collectPlans(stmt.steps || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "StepStatement") {
+      collectPlans(stmt.body || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "TryCatchStatement" || stmt.kind === "AttemptStatement") {
+      collectPlans(stmt.body || [], out);
+      for (const c of stmt.catches || []) {
+        collectPlans(c.body || [], out);
+      }
+      collectPlans(stmt.ensureBody || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "ParallelStatement") {
+      collectPlans(stmt.body || [], out);
+      collectPlans(stmt.thenHandler ? [stmt.thenHandler] : [], out);
+      continue;
+    }
+
+    if (stmt.kind === "WhenStatement") {
+      collectPlans(stmt.body || [], out);
+      collectPlans(stmt.otherwise || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "GoalStatement" || stmt.kind === "WorkspaceStatement") {
+      collectPlans(stmt.body || [], out);
+      continue;
+    }
+  }
+}
+
 export function buildTracePlan(ast, filePath) {
   const actions = [];
   walkStatements(ast.body || [], actions);
+  const plans = [];
+  collectPlans(ast.body || [], plans);
 
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -167,8 +237,10 @@ export function buildTracePlan(ast, filePath) {
     file: filePath,
     generatedAt: new Date().toISOString(),
     actionCount: actions.length,
+    planCount: plans.length,
     duration: durationTotal,
     haiku: sessionHaiku,
-    actions
+    actions,
+    plans
   };
 }

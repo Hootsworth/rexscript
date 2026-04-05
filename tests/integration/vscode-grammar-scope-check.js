@@ -1,5 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, "..", "..");
 
 function assert(condition, message) {
   if (!condition) {
@@ -31,7 +35,7 @@ function toRegex(pattern, field = "match") {
 }
 
 function main() {
-  const grammarPath = path.resolve(process.cwd(), "../extensions/vscode-rexscript/syntaxes/rexscript.tmLanguage.json");
+  const grammarPath = path.join(repoRoot, "extensions", "vscode-rexscript", "syntaxes", "rexscript.tmLanguage.json");
   const grammar = readJson(grammarPath);
 
   const comment = findPatternByName(grammar, "comment.line.double-slash.rexscript");
@@ -69,6 +73,8 @@ function main() {
   assert(commentRe.test("// RexScript comment"), "Expected // line to match comment scope");
 
   assert(keywordControlRe.test("expect"), "Expected expect to match keyword.control scope");
+  assert(keywordControlRe.test("plan"), "Expected plan to match keyword.control scope");
+  assert(keywordControlRe.test("step"), "Expected step to match keyword.control scope");
   assert(keywordControlRe.test("otherwise"), "Expected otherwise to match keyword.control scope");
   assert(keywordControlRe.test("try"), "Expected try to match keyword.control scope");
   assert(keywordControlRe.test("catch"), "Expected catch to match keyword.control scope");

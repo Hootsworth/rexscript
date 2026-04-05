@@ -55,6 +55,22 @@
           ]
         },
         {
+          "kind": "PlanStatement",
+          "category": "Control",
+          "fields": [
+            { "name": "name", "type": "StringLiteral" },
+            { "name": "steps", "type": "StepStatement[]" }
+          ]
+        },
+        {
+          "kind": "StepStatement",
+          "category": "Control",
+          "fields": [
+            { "name": "title", "type": "StringLiteral" },
+            { "name": "body", "type": "Statement[]" }
+          ]
+        },
+        {
           "kind": "FindStatement",
           "category": "Observation",
           "fields": [

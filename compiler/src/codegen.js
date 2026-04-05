@@ -31,6 +31,73 @@ function nextTemp(ctx, prefix = "tmp") {
   return `__rex_${prefix}_${ctx.counter}`;
 }
 
+function withHoistedAliases(ctx, aliases, fn) {
+  ctx.hoistedAliasStack.push(new Set(aliases || []));
+  try {
+    return fn();
+  } finally {
+    ctx.hoistedAliasStack.pop();
+  }
+}
+
+function isHoistedAlias(ctx, alias) {
+  if (!alias) {
+    return false;
+  }
+  return (ctx.hoistedAliasStack || []).some((scope) => scope.has(alias));
+}
+
+function collectAliases(statements, out = new Set()) {
+  for (const stmt of statements || []) {
+    if (!stmt || !stmt.kind) {
+      continue;
+    }
+
+    const alias = statementAlias(stmt);
+    if (alias) {
+      out.add(alias);
+    }
+
+    if (stmt.kind === "StepStatement") {
+      collectAliases(stmt.body || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "PlanStatement") {
+      collectAliases(stmt.steps || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "TryCatchStatement" || stmt.kind === "AttemptStatement") {
+      collectAliases(stmt.body || [], out);
+      for (const c of stmt.catches || []) {
+        collectAliases(c.body || [], out);
+      }
+      collectAliases(stmt.ensureBody || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "WhenStatement") {
+      collectAliases(stmt.body || [], out);
+      collectAliases(stmt.otherwise || [], out);
+      continue;
+    }
+
+    if (stmt.kind === "ParallelStatement") {
+      collectAliases(stmt.body || [], out);
+      collectAliases(stmt.thenHandler ? [stmt.thenHandler] : [], out);
+      continue;
+    }
+
+    if (stmt.kind === "UseInsteadStatement") {
+      for (const c of stmt.catches || []) {
+        collectAliases(c.body || [], out);
+      }
+    }
+  }
+  return out;
+}
+
 function actionMeta(stmt) {
   const loc = stmt?.loc?.start
     ? {
@@ -89,7 +156,7 @@ function emitRiskWrapped(ctx, indent, meta, callExpr, assignTo = null) {
     `${indent}await __xrisk.after({ action: ${JSON.stringify(meta.action)}, riskLevel: ${JSON.stringify(meta.riskLevel)}, result: ${resultTemp} ?? null, loc: ${loc} });`
   );
   if (assignTo) {
-    lines.push(`${indent}const ${assignTo} = ${resultTemp};`);
+    lines.push(isHoistedAlias(ctx, assignTo) ? `${indent}${assignTo} = ${resultTemp};` : `${indent}const ${assignTo} = ${resultTemp};`);
   }
   return lines.join("\n");
 }
@@ -353,6 +420,24 @@ function emitStatement(ctx, stmt, indent = "") {
       return `${indent}await __xrisk.goalStart(${JSON.stringify(stmt.description)}, ${constraintsStr}, ${loc});\n${indent}try {\n${goalBody}\n${indent}} finally {\n${indent}  await __xrisk.goalEnd();\n${indent}}`;
     }
 
+    case "PlanStatement": {
+      const hoistedAliases = [...collectAliases(stmt.steps || [])];
+      const prelude = hoistedAliases.length ? `${indent}let ${hoistedAliases.join(", ")};\n` : "";
+      const planBody = withHoistedAliases(
+        ctx,
+        hoistedAliases,
+        () => (stmt.steps || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n")
+      );
+      const loc = stmt.loc ? JSON.stringify(stmt.loc.start) : "null";
+      return `${prelude}${indent}await __xrisk.planStart(${JSON.stringify(stmt.name)}, ${loc});\n${indent}try {\n${planBody}\n${indent}} finally {\n${indent}  await __xrisk.planEnd();\n${indent}}`;
+    }
+
+    case "StepStatement": {
+      const stepBody = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+      const loc = stmt.loc ? JSON.stringify(stmt.loc.start) : "null";
+      return `${indent}await __xrisk.stepStart(${JSON.stringify(stmt.title)}, ${loc});\n${indent}try {\n${stepBody}\n${indent}} finally {\n${indent}  await __xrisk.stepEnd();\n${indent}}`;
+    }
+
     case "WorkspaceStatement": {
       const wsBody = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
       return `${indent}await __rex.workspaceStart(${JSON.stringify(stmt.name)});\n${indent}try {\n${wsBody}\n${indent}} finally {\n${indent}  await __rex.workspaceEnd();\n${indent}}`;
@@ -447,7 +532,7 @@ function emitStatement(ctx, stmt, indent = "") {
 }
 
 export function generate(ast, options = {}) {
-  const ctx = { counter: 0 };
+  const ctx = { counter: 0, hoistedAliasStack: [] };
   const header = [
     "// ╔══════════════════════════════════════════════════╗",
     "// ║  Compiled by RexScript v0.1.0 · Hatchling        ║",

@@ -1,5 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, "..", "..");
 
 function assert(condition, message) {
   if (!condition) {
@@ -16,8 +20,7 @@ function includesAny(haystack, values) {
 }
 
 function main() {
-  const root = path.resolve(process.cwd(), "..");
-  const extensionRoot = path.join(root, "extensions", "vscode-rexscript");
+  const extensionRoot = path.join(repoRoot, "extensions", "vscode-rexscript");
 
   const manifestPath = path.join(extensionRoot, "package.json");
   const grammarPath = path.join(extensionRoot, "syntaxes", "rexscript.tmLanguage.json");

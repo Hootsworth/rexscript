@@ -115,6 +115,8 @@ const REX_STATEMENT_KEYWORDS = new Set([
   "rotate",
   "use",
   "goal",
+  "plan",
+  "step",
   "workspace",
   "rationale",
   "fact",
@@ -924,6 +926,28 @@ function parseWorkspace(stream) {
   return withLoc(start, { kind: "WorkspaceStatement", name, body }, stream.peek(-1));
 }
 
+function parseStep(stream) {
+  const start = stream.consumeValue("step");
+  const title = decodeStringToken(stream.consumeType("STRING", "ERR001", "step requires a string title"));
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "StepStatement", title, body }, stream.peek(-1));
+}
+
+function parsePlan(stream) {
+  const start = stream.consumeValue("plan");
+  const name = decodeStringToken(stream.consumeType("STRING", "ERR001", "plan requires a string name"));
+  stream.consumeValue("{");
+  const steps = [];
+  while (!stream.eof() && !stream.matchValue("}")) {
+    if (!stream.matchValue("step")) {
+      throw new ParserError("ERR001", "plan blocks may only contain step statements", stream.peek());
+    }
+    steps.push(parseStep(stream));
+  }
+  stream.consumeValue("}");
+  return withLoc(start, { kind: "PlanStatement", name, steps }, stream.peek(-1));
+}
+
 function parseRationale(stream) {
   const start = stream.consumeValue("rationale");
   const reason = decodeStringToken(stream.consumeType("STRING"));
@@ -1086,6 +1110,8 @@ function parseStatement(stream) {
       return parseGoal(stream);
     case "workspace":
       return parseWorkspace(stream);
+    case "plan":
+      return parsePlan(stream);
     case "rationale":
       return parseRationale(stream);
     case "fact":

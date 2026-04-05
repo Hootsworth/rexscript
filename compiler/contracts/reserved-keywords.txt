@@ -72,6 +72,8 @@ goal
 constraint
 budget
 workspace
+plan
+step
 rationale
 assess
 tool
