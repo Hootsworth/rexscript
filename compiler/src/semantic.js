@@ -29,6 +29,9 @@ const ALLOWED_FAILURE_TYPES = new Set([
   "ForeignRuntimeMissing",
   "TamperDetected",
   "SessionClosed",
+  "ExtractionFailed",
+  "BudgetExceeded",
+  "HallucinationError",
   "*"
 ]);
 
@@ -548,6 +551,49 @@ function analyzeStatements(statements, state, inTryBody = false) {
         pushDiagnostic(state, "warning", "WARN007", "$agent accessed in dynamic feature", stmt.loc);
       }
       updateSessionCloseTracker(stmt, state);
+      continue;
+    }
+    
+    if (stmt.kind === "InteractStatement") {
+      if (!state.variables.has(stmt.page)) {
+        pushDiagnostic(state, "error", "ERR002", `Variable ${stmt.page} used before declaration`, stmt.loc);
+      }
+      if (!inTryBody) {
+        pushDiagnostic(state, "warning", "WARN021", `${stmt.verb} without failure handler`, stmt.loc);
+      }
+      continue;
+    }
+    
+    if (stmt.kind === "ExtractStatement") {
+      if (!state.variables.has(stmt.source)) {
+        pushDiagnostic(state, "error", "ERR002", `Variable ${stmt.source} used before declaration`, stmt.loc);
+      }
+      if (stmt.alias) {
+        state.variables.add(stmt.alias);
+      }
+      continue;
+    }
+    
+    if (stmt.kind === "WatchStatement") {
+      if (!inTryBody) {
+        pushDiagnostic(state, "warning", "WARN022", "watch without failure handler", stmt.loc);
+      }
+      if (stmt.alias) {
+        state.variables.add(stmt.alias);
+      }
+      continue;
+    }
+    
+    if (stmt.kind === "VerifyStatement") {
+      const rootTarget = String(stmt.target || "").split(".")[0];
+      if (!state.variables.has(rootTarget)) {
+        pushDiagnostic(state, "error", "ERR002", `Variable ${rootTarget} used before declaration`, stmt.loc);
+      }
+      continue;
+    }
+    
+    if (stmt.kind === "BudgetStatement") {
+      analyzeStatements(stmt.body || [], state, inTryBody);
       continue;
     }
   }

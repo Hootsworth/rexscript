@@ -23,6 +23,8 @@ function statementAlias(stmt) {
   if (stmt.kind === "RecallStatement") return stmt.alias;
   if (stmt.kind === "SynthesiseStatement") return stmt.alias || null;
   if (stmt.kind === "UseInsteadStatement") return stmt.outputAlias || null;
+  if (stmt.kind === "ExtractStatement") return stmt.alias || null;
+  if (stmt.kind === "WatchStatement") return stmt.alias || null;
   return null;
 }
 
@@ -132,6 +134,16 @@ function actionMeta(stmt) {
       const risk = hint === "bash" ? "HIGH" : hint === "python" ? "MEDIUM" : "LOW";
       return { action: "use.instead", capability: "FOREIGN_EXEC", riskLevel: risk, target: JSON.stringify(hint), loc };
     }
+    case "InteractStatement":
+      return { action: stmt.verb, capability: "NETWORK", riskLevel: "MEDIUM", target: stmt.selector, loc };
+    case "ExtractStatement":
+      return { action: "extract", capability: "MODEL", riskLevel: "LOW", target: "null", loc };
+    case "WatchStatement":
+      return { action: "watch", capability: "NETWORK", riskLevel: "LOW", target: toJsValue(stmt.url), loc };
+    case "VerifyStatement":
+      return { action: "verify", capability: "INTERNAL", riskLevel: "LOW", target: stmt.target, loc };
+    case "BudgetStatement":
+      return { action: "budget", capability: "INTERNAL", riskLevel: "LOW", target: "null", loc };
     default:
       return null;
   }
@@ -304,6 +316,34 @@ function emitStatement(ctx, stmt, indent = "") {
 
     case "RetryStatement":
       return `${indent}return __rex.retry();`;
+
+    case "InteractStatement": {
+      if (stmt.verb === "click") {
+        return emitRiskWrapped(ctx, indent, meta, `__rex.click(${stmt.selector}, ${stmt.page})`, null);
+      } else if (stmt.verb === "type") {
+        return emitRiskWrapped(ctx, indent, meta, `__rex.type(${stmt.selector}, ${stmt.page}, ${stmt.text})`, null);
+      } else if (stmt.verb === "scroll") {
+        return emitRiskWrapped(ctx, indent, meta, `__rex.scroll(${stmt.selector}, ${stmt.page})`, null);
+      }
+      return `${indent}/* unknown interact verb: ${stmt.verb} */`;
+    }
+
+    case "ExtractStatement": {
+      return emitRiskWrapped(ctx, indent, meta, `__rex.extract(${JSON.stringify(stmt.schema || {})}, ${stmt.source})`, stmt.alias);
+    }
+
+    case "WatchStatement": {
+      return emitRiskWrapped(ctx, indent, meta, `__rex.watch(${toJsValue(stmt.url)}, ${stmt.condition}, { timeout: ${stmt.timeoutMs || 30000} })`, stmt.alias);
+    }
+
+    case "VerifyStatement": {
+      return emitRiskWrapped(ctx, indent, meta, `__rex.verify(${stmt.target}, ${stmt.claim})`, null);
+    }
+
+    case "BudgetStatement": {
+      const body = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");
+      return `${indent}await __rex.budget(${JSON.stringify(stmt.constraints)}, async () => {\n${body}\n${indent}});`;
+    }
 
     case "WhenStatement": {
       const body = (stmt.body || []).map((s) => emitStatement(ctx, s, `${indent}  `)).join("\n");

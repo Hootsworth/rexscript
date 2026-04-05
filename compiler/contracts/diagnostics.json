@@ -126,6 +126,16 @@
       "id": "WARN020",
       "title": "use.instead executed without configured security sandbox",
       "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN021",
+      "title": "interaction primitive without failure handler",
+      "riskIfIgnored": "MEDIUM"
+    },
+    {
+      "id": "WARN022",
+      "title": "watch without failure handler",
+      "riskIfIgnored": "MEDIUM"
     }
   ]
 }

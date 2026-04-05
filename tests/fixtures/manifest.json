@@ -40,6 +40,10 @@
     {
       "file": "valid/plan_step_flow.rex",
       "expect": "parse+semantic pass"
+    },
+    {
+      "file": "valid/extreme_primitives.rex",
+      "expect": "parse+semantic pass"
     }
   ],
   "invalid": [

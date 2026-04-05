@@ -127,7 +127,14 @@ const REX_STATEMENT_KEYWORDS = new Set([
   "telemetry",
   "spawn",
   "send",
-  "security"
+  "security",
+  "click",
+  "type",
+  "scroll",
+  "extract",
+  "watch",
+  "verify",
+  "budget"
 ]);
 
 function withLoc(startToken, node, endToken = startToken) {
@@ -254,6 +261,39 @@ function parseBracedRaw(stream) {
   }
 
   throw new ParserError("ERR001", "Unterminated block", open);
+}
+
+function parseExtractSchema(raw, token) {
+  const schema = {};
+  const parts = String(raw || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    throw new ParserError("ERR001", "extract requires at least one schema field", token);
+  }
+
+  for (const part of parts) {
+    const match = part.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!match) {
+      throw new ParserError("ERR001", `Invalid extract schema field: ${part}`, token);
+    }
+    const [, key, type] = match;
+    schema[key] = type;
+  }
+
+  return schema;
+}
+
+function parseDurationUnit(stream, message = "Expected duration unit") {
+  const token = stream.peek();
+  const value = token?.value || null;
+  if (!["ms", "s", "m", "h"].includes(value)) {
+    throw new ParserError("ERR001", message, token || stream.peek(-1));
+  }
+  stream.next();
+  return value;
 }
 
 function parseBlock(stream) {
@@ -751,6 +791,9 @@ function durationToMs(value, unit) {
     return null;
   }
   const normalized = String(unit || "ms").toLowerCase();
+  if (normalized === "h") {
+    return amount * 60 * 60 * 1000;
+  }
   if (normalized === "s") {
     return amount * 1000;
   }
@@ -1132,9 +1175,117 @@ function parseStatement(stream) {
       return parseSend(stream);
     case "security":
       return parseSecurity(stream);
+    case "click":
+    case "type":
+    case "scroll":
+      return parseInteract(stream);
+    case "extract":
+      return parseExtract(stream);
+    case "watch":
+      return parseWatch(stream);
+    case "verify":
+      return parseVerify(stream);
+    case "budget":
+      return parseBudget(stream);
     default:
       return parseHostJsStatement(stream);
   }
+}
+
+function parseInteract(stream) {
+  const start = stream.next(); // click/type/scroll
+  const verb = start.value;
+  
+  if (verb === "click") {
+    const selector = stream.consumeType("STRING", "ERR001", "click requires semantic selector").value;
+    stream.consumeValue("on");
+    const page = parseVariable(stream);
+    return withLoc(start, { kind: "InteractStatement", verb, selector, page }, stream.peek(-1));
+  } else if (verb === "type") {
+    const text = stream.consumeType("STRING", "ERR001", "type requires text literal").value;
+    stream.consumeValue("into");
+    const selector = stream.consumeType("STRING", "ERR001", "type requires semantic selector").value;
+    stream.consumeValue("on");
+    const page = parseVariable(stream);
+    return withLoc(start, { kind: "InteractStatement", verb, text, selector, page }, stream.peek(-1));
+  } else if (verb === "scroll") {
+    stream.consumeValue("to");
+    const selector = stream.consumeType("STRING", "ERR001", "scroll requires semantic selector").value;
+    stream.consumeValue("on");
+    const page = parseVariable(stream);
+    return withLoc(start, { kind: "InteractStatement", verb, selector, page }, stream.peek(-1));
+  }
+}
+
+function parseExtract(stream) {
+  const start = stream.consumeValue("extract");
+  const schemaRaw = parseBracedRaw(stream);
+  const schema = parseExtractSchema(schemaRaw, start);
+  stream.consumeValue("from");
+  const source = parseVariable(stream);
+  stream.consumeValue("as");
+  const alias = parseVariable(stream);
+  return withLoc(start, { kind: "ExtractStatement", schema, source, alias }, stream.peek(-1));
+}
+
+function parseWatch(stream) {
+  const start = stream.consumeValue("watch");
+  const url = parseUrlLike(stream);
+  stream.consumeValue("for");
+  const condition = stream.consumeType("STRING", "ERR001", "watch requires condition string").value;
+  stream.consumeValue("until");
+  const timeNum = stream.consumeType("NUMBER", "ERR001", "watch requires time number").value;
+  const unit = parseDurationUnit(stream, "watch requires duration unit (ms, s, m, h)");
+  const timeoutMs = durationToMs(timeNum, unit);
+  stream.consumeValue("as");
+  const alias = parseVariable(stream);
+  return withLoc(start, { kind: "WatchStatement", url, condition, timeoutMs, alias }, stream.peek(-1));
+}
+
+function parseVerify(stream) {
+  const start = stream.consumeValue("verify");
+  // Could be $var or $var.prop
+  const parts = [];
+  parts.push(stream.consumeType("VARIABLE").value);
+  while (stream.matchValue(".")) {
+    stream.next();
+    parts.push(parseIdentifier(stream));
+  }
+  const target = parts.join(".");
+  
+  stream.consumeValue("is");
+  const claim = stream.consumeType("STRING", "ERR001", "verify requires claim string").value;
+  return withLoc(start, { kind: "VerifyStatement", target, claim }, stream.peek(-1));
+}
+
+function parseBudget(stream) {
+  const start = stream.consumeValue("budget");
+  const constraints = {};
+  
+  while (!stream.matchValue("{")) {
+    const keyToken = stream.next();
+    const key = keyToken?.value;
+    if (!key) {
+      throw new ParserError("ERR001", "budget requires at least one constraint before body", stream.peek(-1));
+    }
+    stream.consumeValue("=");
+    if (key === "max_cost") {
+      stream.consumeValue("$");
+      constraints.maxCost = Number(stream.consumeType("NUMBER").value);
+    } else if (key === "max_tokens") {
+      constraints.maxTokens = Number(stream.consumeType("NUMBER").value);
+    } else if (key === "max_time") {
+      const timeNum = stream.consumeType("NUMBER").value;
+      const unit = parseDurationUnit(stream, "budget max_time requires duration unit (ms, s, m, h)");
+      constraints.maxTimeMs = durationToMs(timeNum, unit);
+    } else {
+      throw new ParserError("ERR001", `Unknown budget constraint: ${key}`, keyToken);
+    }
+    if (stream.matchValue(",")) stream.next();
+  }
+  
+  const body = parseBlock(stream);
+  return withLoc(start, { kind: "BudgetStatement", constraints, body }, stream.peek(-1));
 }
 
 export function parse(source) {

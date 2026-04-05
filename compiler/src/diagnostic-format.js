@@ -21,7 +21,9 @@ const CODE_SUGGESTIONS = {
   WARN005: "Check synthesis confidence before downstream actions.",
   WARN006: "Use explicit language hint for deterministic routing.",
   WARN007: "Avoid $agent access unless dynamic context truly requires it.",
-  WARN020: "Configure security { sandbox: ..., lockdown: strict } before use.instead execution."
+  WARN020: "Configure security { sandbox: ..., lockdown: strict } before use.instead execution.",
+  WARN021: "Wrap interaction primitives in attempt/recover or expect/otherwise.",
+  WARN022: "Wrap watch in attempt/recover or expect/otherwise."
 };
 
 let DIAG_RISK_INDEX = new Map([
@@ -48,7 +50,9 @@ let DIAG_RISK_INDEX = new Map([
   ["WARN005", "LOW"],
   ["WARN006", "MEDIUM"],
   ["WARN007", "LOW"],
-  ["WARN020", "MEDIUM"]
+  ["WARN020", "MEDIUM"],
+  ["WARN021", "MEDIUM"],
+  ["WARN022", "MEDIUM"]
 ]);
 
 function diagnosticRisk(code) {

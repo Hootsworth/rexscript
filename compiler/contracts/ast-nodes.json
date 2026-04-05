@@ -80,6 +80,51 @@
           ]
         },
         {
+          "kind": "InteractStatement",
+          "category": "Action",
+          "fields": [
+            { "name": "verb", "type": "Identifier" },
+            { "name": "selector", "type": "StringLiteral" },
+            { "name": "page", "type": "Variable" },
+            { "name": "text", "type": "StringLiteral", "required": false }
+          ]
+        },
+        {
+          "kind": "ExtractStatement",
+          "category": "Decision",
+          "fields": [
+            { "name": "schema", "type": "SchemaObject" },
+            { "name": "source", "type": "Variable" },
+            { "name": "alias", "type": "Variable" }
+          ]
+        },
+        {
+          "kind": "WatchStatement",
+          "category": "Observation",
+          "fields": [
+            { "name": "url", "type": "Expression" },
+            { "name": "condition", "type": "StringLiteral" },
+            { "name": "timeoutMs", "type": "NumberLiteral" },
+            { "name": "alias", "type": "Variable" }
+          ]
+        },
+        {
+          "kind": "VerifyStatement",
+          "category": "Decision",
+          "fields": [
+            { "name": "target", "type": "Expression" },
+            { "name": "claim", "type": "StringLiteral" }
+          ]
+        },
+        {
+          "kind": "BudgetStatement",
+          "category": "Control",
+          "fields": [
+            { "name": "constraints", "type": "BudgetConstraints" },
+            { "name": "body", "type": "Statement[]" }
+          ]
+        },
+        {
           "kind": "RecallStatement",
           "category": "Observation",
           "fields": [

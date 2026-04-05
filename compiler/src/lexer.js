@@ -5,7 +5,8 @@ export const REX_KEYWORDS = new Set([
   "tool", "equip", "memory", "remember", "forget", "recall", "clear", "parallel",
   "distributed", "session", "close", "restart", "with", "as", "then", "timeout",
   "spawn", "send", "receive", "from", "to", "security", "vault", "sandbox", "lockdown", "strict",
-  "fact", "state", "attempt", "recover", "navigate", "submit", "read", "click", "find",
+  "fact", "state", "attempt", "recover", "navigate", "submit", "read", "click", "type", "into", "scroll", "find",
+  "extract", "watch", "until", "verify", "is", "budget", "max_tokens", "max_cost", "max_time",
   "agent", "trace", "trail", "risk", "true", "false", "null", "undefined",
   "if", "else", "function", "class", "return", "import", "export", "for", "while",
   "switch", "case", "break", "continue", "throw", "async", "new", "delete", "typeof", "instanceof", "void"
@@ -112,7 +113,7 @@ export function tokenize(source, keywords = REX_KEYWORDS) {
       continue;
     }
 
-    if (ch === "$") {
+    if (ch === "$" && (i + 1 >= source.length || !/[0-9]/.test(source[i+1]))) {
       const startLine = line;
       const startCol = col;
       const startIndex = i;

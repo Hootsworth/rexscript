@@ -514,6 +514,124 @@ function semanticFind(selector, source) {
   return res;
 }
 
+function pause(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeSchemaValueType(value) {
+  return String(value || "string").trim().toLowerCase();
+}
+
+function resolvePageContext(pageLike) {
+  const page = pageLike && typeof pageLike === "object" ? pageLike : null;
+  const sessionId = page?.trace?.sessionId || page?.sessionId || null;
+  const session = sessionId ? __sessions.get(sessionId) || null : null;
+  return {
+    page,
+    session
+  };
+}
+
+function extractSourceText(source) {
+  if (source == null) {
+    return "";
+  }
+  if (typeof source === "string") {
+    return source;
+  }
+  if (typeof source === "number" || typeof source === "boolean") {
+    return String(source);
+  }
+  if (typeof source === "object") {
+    return [
+      source.content,
+      source.summary,
+      source.title,
+      source.raw
+    ]
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+      .join("\n");
+  }
+  return String(source);
+}
+
+function extractFieldValue(field, type, text) {
+  const name = String(field || "").replace(/[^a-z0-9]+/gi, "[^a-z0-9]{0,8}");
+  const normalizedType = normalizeSchemaValueType(type);
+  const sourceText = String(text || "");
+
+  if (normalizedType === "number") {
+    const scoped = new RegExp(`${name}[^0-9-]{0,24}(-?\\d+(?:\\.\\d+)?)`, "i").exec(sourceText);
+    const fallback = /(-?\d+(?:\.\d+)?)/.exec(sourceText);
+    const match = scoped || fallback;
+    return match ? Number(match[1]) : null;
+  }
+
+  if (normalizedType === "boolean") {
+    const scoped = new RegExp(`${name}[^a-z]{0,24}(true|false|yes|no|available|unavailable|in stock|out of stock)`, "i").exec(sourceText);
+    const fallback = /\b(true|false|yes|no|available|unavailable|in stock|out of stock)\b/i.exec(sourceText);
+    const match = scoped || fallback;
+    if (!match) {
+      return null;
+    }
+    const value = String(match[1]).toLowerCase();
+    return ["true", "yes", "available", "in stock"].includes(value);
+  }
+
+  const scoped = new RegExp(`${name}[^a-z0-9]{0,8}([a-z0-9][^\\n,;]{0,120})`, "i").exec(sourceText);
+  if (scoped) {
+    return scoped[1].trim();
+  }
+  return null;
+}
+
+function estimateTokenCount(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value ?? "");
+  return Math.max(0, Math.ceil(String(text || "").length / 4));
+}
+
+function verificationOutcome(target, claim) {
+  const targetValue = target;
+  const claimText = cleanStringLiteral(claim, "").toLowerCase();
+
+  if (typeof targetValue === "number") {
+    if (claimText.includes("reasonable")) {
+      return targetValue > 0 && targetValue < 1_000_000_000;
+    }
+    const exact = claimText.match(/-?\d+(?:\.\d+)?/);
+    if (exact) {
+      return targetValue === Number(exact[0]);
+    }
+    return Number.isFinite(targetValue);
+  }
+
+  if (typeof targetValue === "boolean") {
+    if (claimText.includes("true")) return targetValue === true;
+    if (claimText.includes("false")) return targetValue === false;
+    return true;
+  }
+
+  const haystack = summarizeForAssess(targetValue).toLowerCase();
+  if (!claimText) {
+    return haystack.length > 0;
+  }
+
+  const claimWords = claimText
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length >= 3);
+
+  if (haystack.includes(claimText)) {
+    return true;
+  }
+
+  if (claimWords.length === 0) {
+    return haystack.length > 0;
+  }
+
+  return claimWords.every((word) => haystack.includes(word));
+}
+
 function normalizeRows(context) {
   if (Array.isArray(context?.rows)) {
     return context.rows;
@@ -1252,6 +1370,173 @@ const runtime = {
 
   async find(selector, source) {
     return semanticFind(selector, source);
+  },
+
+  async click(selector, pageLike) {
+    const { page, session } = resolvePageContext(pageLike);
+    ensureSessionOpen(session, "click");
+
+    if (session?.__browserState?.page) {
+      const browserPage = session.__browserState.page;
+      const locator = browserPage.getByText(String(selector || ""), { exact: false }).first();
+      await locator.click({ timeout: 3000 });
+      return { ok: true, action: "click", selector, adapter: "playwright", sessionId: session.id };
+    }
+
+    const match = semanticFind(selector, page);
+    if (!match.element) {
+      throw makeRuntimeError("ElementNotFound", `Unable to find semantic target for click: ${selector}`);
+    }
+    return { ok: true, action: "click", selector, adapter: "semantic", match };
+  },
+
+  async type(selector, pageLike, text) {
+    const { page, session } = resolvePageContext(pageLike);
+    ensureSessionOpen(session, "type");
+
+    if (session?.__browserState?.page) {
+      const browserPage = session.__browserState.page;
+      const locator = browserPage.getByLabel(String(selector || "")).first();
+      await locator.fill(String(text || ""), { timeout: 3000 });
+      return { ok: true, action: "type", selector, text: String(text || ""), adapter: "playwright", sessionId: session.id };
+    }
+
+    const match = semanticFind(selector, page);
+    if (!match.element) {
+      throw makeRuntimeError("ElementNotFound", `Unable to find semantic target for type: ${selector}`);
+    }
+    return { ok: true, action: "type", selector, text: String(text || ""), adapter: "semantic", match };
+  },
+
+  async scroll(selector, pageLike) {
+    const { page, session } = resolvePageContext(pageLike);
+    ensureSessionOpen(session, "scroll");
+
+    if (session?.__browserState?.page) {
+      const browserPage = session.__browserState.page;
+      const locator = browserPage.getByText(String(selector || ""), { exact: false }).first();
+      await locator.scrollIntoViewIfNeeded({ timeout: 3000 });
+      return { ok: true, action: "scroll", selector, adapter: "playwright", sessionId: session.id };
+    }
+
+    const match = semanticFind(selector, page);
+    if (!match.element) {
+      throw makeRuntimeError("ElementNotFound", `Unable to find semantic target for scroll: ${selector}`);
+    }
+    return { ok: true, action: "scroll", selector, adapter: "semantic", match };
+  },
+
+  async extract(schema = {}, source) {
+    if (!schema || typeof schema !== "object" || Array.isArray(schema) || Object.keys(schema).length === 0) {
+      throw makeRuntimeError("ExtractionFailed", "extract requires a non-empty schema object");
+    }
+
+    const sourceText = extractSourceText(source);
+    if (!sourceText.trim()) {
+      throw makeRuntimeError("ExtractionFailed", "extract requires non-empty source content");
+    }
+
+    const value = {};
+    let matchedFields = 0;
+    for (const [field, type] of Object.entries(schema)) {
+      const extracted = extractFieldValue(field, type, sourceText);
+      value[field] = extracted;
+      if (extracted != null) {
+        matchedFields += 1;
+      }
+    }
+
+    if (matchedFields === 0) {
+      throw makeRuntimeError("ExtractionFailed", "extract could not match any schema fields in source content");
+    }
+
+    return {
+      ...value,
+      summary: `Extracted ${matchedFields}/${Object.keys(schema).length} fields`,
+      confidence: Number((matchedFields / Math.max(1, Object.keys(schema).length)).toFixed(2)),
+      schema,
+      matchedFields
+    };
+  },
+
+  async watch(url, condition, options = {}) {
+    const timeoutMs = Number(options.timeout || 30000);
+    const pollMs = Math.max(100, Number(options.pollInterval || 250));
+    const deadline = Date.now() + timeoutMs;
+    const needle = cleanStringLiteral(condition, "").toLowerCase();
+    let lastPage = null;
+
+    while (Date.now() <= deadline) {
+      lastPage = await runtime.observe(url, options);
+      const haystack = [lastPage?.title, lastPage?.content, lastPage?.raw]
+        .filter((value) => typeof value === "string")
+        .join("\n")
+        .toLowerCase();
+      if (needle && haystack.includes(needle)) {
+        return {
+          ...lastPage,
+          watch: {
+            matched: true,
+            condition: cleanStringLiteral(condition, ""),
+            observedAt: nowIso()
+          }
+        };
+      }
+      await pause(pollMs);
+    }
+
+    throw makeRuntimeError("Timeout", `watch timed out after ${timeoutMs}ms waiting for '${cleanStringLiteral(condition, "")}'`);
+  },
+
+  async verify(target, claim) {
+    const ok = verificationOutcome(target, claim);
+    if (!ok) {
+      throw makeRuntimeError("HallucinationError", `Verification failed for claim: ${cleanStringLiteral(claim, "")}`);
+    }
+    return {
+      ok: true,
+      claim: cleanStringLiteral(claim, ""),
+      confidence: 0.9
+    };
+  },
+
+  async budget(constraints = {}, fn) {
+    if (typeof fn !== "function") {
+      throw makeRuntimeError("BudgetExceeded", "budget requires an async callback body");
+    }
+
+    const startedAt = Date.now();
+    let result;
+    if (Number.isFinite(constraints.maxTimeMs) && constraints.maxTimeMs > 0) {
+      result = await Promise.race([
+        Promise.resolve().then(() => fn()),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(makeRuntimeError("BudgetExceeded", `Budget max_time exceeded after ${constraints.maxTimeMs}ms`)), constraints.maxTimeMs);
+        })
+      ]);
+    } else {
+      result = await fn();
+    }
+
+    const durationMs = Math.max(0, Date.now() - startedAt);
+    const estimatedTokens = estimateTokenCount(result);
+    if (Number.isFinite(constraints.maxTokens) && estimatedTokens > constraints.maxTokens) {
+      throw makeRuntimeError("BudgetExceeded", `Budget max_tokens exceeded: ${estimatedTokens} > ${constraints.maxTokens}`);
+    }
+
+    const estimatedCost = Number((estimatedTokens * 0.000002).toFixed(6));
+    if (Number.isFinite(constraints.maxCost) && estimatedCost > constraints.maxCost) {
+      throw makeRuntimeError("BudgetExceeded", `Budget max_cost exceeded: ${estimatedCost} > ${constraints.maxCost}`);
+    }
+
+    return {
+      ok: true,
+      result: result ?? null,
+      durationMs,
+      estimatedTokens,
+      estimatedCost,
+      constraints: cloneValue(constraints)
+    };
   },
 
   async remember(data, tags = []) {
