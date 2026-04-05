@@ -6,6 +6,7 @@ const vscode = require("vscode");
 const OUTPUT = vscode.window.createOutputChannel("RexScript");
 const diagnosticCollection = vscode.languages.createDiagnosticCollection("rexscript");
 const diagnosticTimers = new Map();
+let compilerStatusNoticeShown = false;
 
 const KEYWORD_DOCS = {
   observe: {
@@ -112,7 +113,10 @@ const SNIPPETS = [
 function updateDiagnostics(document) {
   if (!document.fileName.endsWith(".rex")) return;
   const compilerDir = findCompilerDir();
-  if (!compilerDir) return;
+  if (!compilerDir) {
+    diagnosticCollection.delete(document.uri);
+    return;
+  }
   
   const filePath = document.uri.fsPath;
   cp.execFile(npmExecutable(), ["run", "rex:check", "--", filePath, "default", "--json"], { cwd: compilerDir }, (err, stdout) => {
@@ -145,7 +149,7 @@ function updateDiagnostics(document) {
 
           diagnosticCollection.set(document.uri, diagnostics);
       } catch (e) {
-          // silent error on bad parse
+          diagnosticCollection.delete(document.uri);
       }
   });
 }
@@ -198,19 +202,41 @@ function findCompilerDir() {
   return null;
 }
 
+function showCompilerUnavailableMessage(contextLabel = "This feature") {
+  if (!compilerStatusNoticeShown) {
+    compilerStatusNoticeShown = true;
+    OUTPUT.appendLine("[rexscript] Standalone mode: syntax highlighting, snippets, hovers, and quick fixes are available.");
+    OUTPUT.appendLine("[rexscript] Repo-backed features like diagnostics, check, compile, run, and trace need a workspace containing rexscript/compiler or compiler.");
+  }
+
+  vscode.window.showInformationMessage(
+    `${contextLabel} needs a RexScript compiler workspace. Open a workspace containing 'rexscript/compiler' or 'compiler' to enable diagnostics and execution commands.`
+  );
+}
+
 function loadReservedKeywords() {
   const compilerDir = findCompilerDir();
-  if (!compilerDir) {
+  if (compilerDir) {
+    const filePath = path.join(compilerDir, "contracts", "reserved-keywords.txt");
+    if (fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, "utf8")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"));
+    }
+  }
+
+  const bundledPath = path.join(__dirname, "keywords.json");
+  if (!fs.existsSync(bundledPath)) {
     return [];
   }
-  const filePath = path.join(compilerDir, "contracts", "reserved-keywords.txt");
-  if (!fs.existsSync(filePath)) {
+
+  try {
+    const keywords = JSON.parse(fs.readFileSync(bundledPath, "utf8"));
+    return Array.isArray(keywords) ? keywords : [];
+  } catch {
     return [];
   }
-  return fs.readFileSync(filePath, "utf8")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
 }
 
 function getKeywordRange(document, position) {
@@ -303,7 +329,7 @@ async function runRexCommand(scriptName) {
 
   const compilerDir = findCompilerDir();
   if (!compilerDir) {
-    vscode.window.showErrorMessage("Could not find rexscript/compiler in this workspace.");
+    showCompilerUnavailableMessage(`RexScript ${scriptName}`);
     return;
   }
 
@@ -361,6 +387,10 @@ function register(context, command, callback) {
 function activate(context) {
   context.subscriptions.push(OUTPUT);
   context.subscriptions.push(diagnosticCollection);
+
+  if (!findCompilerDir()) {
+    OUTPUT.appendLine("[rexscript] Compiler workspace not detected. Running in standalone authoring mode.");
+  }
 
   vscode.workspace.onDidSaveTextDocument(updateDiagnostics, null, context.subscriptions);
   vscode.workspace.onDidOpenTextDocument(scheduleDiagnostics, null, context.subscriptions);

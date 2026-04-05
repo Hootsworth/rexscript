@@ -33,6 +33,7 @@ function main() {
   const manifest = readJson(manifestPath);
   const grammar = readJson(grammarPath);
   const iconTheme = readJson(iconThemePath);
+  const keywords = readJson(path.join(extensionRoot, "keywords.json"));
   const extensionSource = fs.readFileSync(path.join(extensionRoot, "extension.js"), "utf8");
 
   const contributes = manifest.contributes || {};
@@ -67,6 +68,7 @@ function main() {
 
   const fileExtensions = iconTheme.fileExtensions || {};
   assert(fileExtensions.rex === "rexscript-file", "Icon theme should map .rex extension to rexscript-file icon");
+  assert(Array.isArray(keywords) && keywords.includes("observe") && keywords.includes("extract"), "Extension should bundle keyword metadata for standalone authoring");
 
   assert(grammar.scopeName === "source.rexscript", "Grammar root scope must be source.rexscript");
   assert(grammar.repository && grammar.repository.keywords, "Grammar repository is missing keywords section");
@@ -80,6 +82,8 @@ function main() {
   assert(keywordPatterns.includes("try") && keywordPatterns.includes("catch"), "Grammar keywords should retain legacy try/catch compatibility tokens");
   assert(keywordPatterns.includes("use\\.instead"), "Grammar keywords should include use.instead token");
   assert(keywordPatterns.includes("extract") && keywordPatterns.includes("watch") && keywordPatterns.includes("verify"), "Grammar keywords should include extreme primitives");
+  assert(extensionSource.includes("showCompilerUnavailableMessage"), "Extension should explain missing compiler state");
+  assert(extensionSource.includes("keywords.json"), "Extension should fall back to bundled keywords in standalone installs");
   assert(extensionSource.includes("registerCompletionItemProvider"), "Extension should register completion provider");
   assert(extensionSource.includes("registerHoverProvider"), "Extension should register hover provider");
   assert(extensionSource.includes("registerCodeActionsProvider"), "Extension should register code action provider");

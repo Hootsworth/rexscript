@@ -71,6 +71,7 @@ function main() {
   const stringSingleEnd = toRegex(stringSingle, "end");
 
   assert(commentRe.test("// RexScript comment"), "Expected // line to match comment scope");
+  assert(commentRe.test("# RexScript comment"), "Expected # line to match comment scope");
 
   assert(keywordControlRe.test("expect"), "Expected expect to match keyword.control scope");
   assert(keywordControlRe.test("plan"), "Expected plan to match keyword.control scope");
