@@ -2,7 +2,7 @@
   "name": "rexscript-vscode-support",
   "displayName": "RexScript Language Support",
   "description": "RexScript syntax highlighting, file icons, and command palette actions.",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "publisher": "rexscript",
   "license": "MIT",
   "repository": {
@@ -14,6 +14,14 @@
   },
   "categories": [
     "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:rexscript",
+    "onCommand:rexscript.openMenu",
+    "onCommand:rexscript.check",
+    "onCommand:rexscript.compile",
+    "onCommand:rexscript.run",
+    "onCommand:rexscript.trace"
   ],
   "main": "./extension.js",
   "contributes": {

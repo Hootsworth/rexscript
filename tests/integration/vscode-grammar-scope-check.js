@@ -75,6 +75,7 @@ function main() {
   assert(keywordControlRe.test("expect"), "Expected expect to match keyword.control scope");
   assert(keywordControlRe.test("plan"), "Expected plan to match keyword.control scope");
   assert(keywordControlRe.test("step"), "Expected step to match keyword.control scope");
+  assert(keywordControlRe.test("budget"), "Expected budget to match keyword.control scope");
   assert(keywordControlRe.test("otherwise"), "Expected otherwise to match keyword.control scope");
   assert(keywordControlRe.test("try"), "Expected try to match keyword.control scope");
   assert(keywordControlRe.test("catch"), "Expected catch to match keyword.control scope");
@@ -83,6 +84,9 @@ function main() {
 
   assert(keywordOtherRe.test("observe"), "Expected observe to match keyword.other scope");
   assert(keywordOtherRe.test("synthesise"), "Expected synthesise to match keyword.other scope");
+  assert(keywordOtherRe.test("extract"), "Expected extract to match keyword.other scope");
+  assert(keywordOtherRe.test("watch"), "Expected watch to match keyword.other scope");
+  assert(keywordOtherRe.test("verify"), "Expected verify to match keyword.other scope");
   assert(keywordOtherRe.test("limit"), "Expected limit to match keyword.other scope");
 
   assert(constantLangRe.test("loaded"), "Expected loaded to match constant.language scope");

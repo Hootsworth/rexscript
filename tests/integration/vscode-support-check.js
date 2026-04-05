@@ -33,11 +33,13 @@ function main() {
   const manifest = readJson(manifestPath);
   const grammar = readJson(grammarPath);
   const iconTheme = readJson(iconThemePath);
+  const extensionSource = fs.readFileSync(path.join(extensionRoot, "extension.js"), "utf8");
 
   const contributes = manifest.contributes || {};
   const languages = contributes.languages || [];
   const grammars = contributes.grammars || [];
   const commands = contributes.commands || [];
+  const activationEvents = manifest.activationEvents || [];
 
   const rexLanguage = languages.find((entry) => entry.id === "rexscript");
   assert(rexLanguage, "Manifest missing rexscript language contribution");
@@ -47,6 +49,7 @@ function main() {
   const rexGrammar = grammars.find((entry) => entry.language === "rexscript");
   assert(rexGrammar, "Manifest missing rexscript grammar contribution");
   assert(rexGrammar.scopeName === "source.rexscript", "rexscript grammar scope name should be source.rexscript");
+  assert(activationEvents.includes("onLanguage:rexscript"), "Manifest should activate on rexscript language");
 
   const requiredCommands = [
     "rexscript.openMenu",
@@ -76,6 +79,10 @@ function main() {
   assert(includesAny(keywordPatterns, preferredRecoveryTokens), "Grammar keywords must include expect/otherwise flow tokens");
   assert(keywordPatterns.includes("try") && keywordPatterns.includes("catch"), "Grammar keywords should retain legacy try/catch compatibility tokens");
   assert(keywordPatterns.includes("use\\.instead"), "Grammar keywords should include use.instead token");
+  assert(keywordPatterns.includes("extract") && keywordPatterns.includes("watch") && keywordPatterns.includes("verify"), "Grammar keywords should include extreme primitives");
+  assert(extensionSource.includes("registerCompletionItemProvider"), "Extension should register completion provider");
+  assert(extensionSource.includes("registerHoverProvider"), "Extension should register hover provider");
+  assert(extensionSource.includes("registerCodeActionsProvider"), "Extension should register code action provider");
 
   console.log("VS Code RexScript support check passed.");
 }

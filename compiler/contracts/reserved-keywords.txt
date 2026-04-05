@@ -71,6 +71,9 @@ timeout
 goal
 constraint
 budget
+max_tokens
+max_cost
+max_time
 workspace
 plan
 step
@@ -95,3 +98,14 @@ security
 sandbox
 lockdown
 strict
+click
+type
+scroll
+extract
+watch
+until
+verify
+into
+on
+for
+is

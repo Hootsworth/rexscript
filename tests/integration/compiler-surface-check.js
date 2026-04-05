@@ -76,12 +76,54 @@ function checkCompileDryRun() {
   }
 }
 
+function checkExtremePrimitiveContracts() {
+  const source = [
+    'extract { price: number, inStock: boolean } from $page as $data',
+    'verify $missing.price is "ok"',
+    'watch "https://example.com" for "available" until 5q as $page',
+    'budget max_unknown=1 { synthesise [$page] as $summary }'
+  ];
+
+  const extractResult = compileString(
+    `observe page "data:text/html,<html><body>Price 19.99 In stock true</body></html>" as $page\n${source[0]}\n`,
+    "extreme-contracts.rex"
+  );
+  assert(extractResult.ok, "extract contract snippet should compile");
+  assert(
+    extractResult.code.includes('__rex.extract({"price":"number","inStock":"boolean"}, $page)'),
+    "extract should compile typed schema entries as string literals"
+  );
+
+  const verifyResult = checkString(`${source[1]}\n`, "verify-extreme.rex");
+  assert(
+    verifyResult.diagnostics.errors.some((diag) => diag.code === "ERR002"),
+    "verify should fail when root variable is undeclared"
+  );
+
+  let invalidWatch = false;
+  try {
+    checkString(`${source[2]}\n`, "watch-invalid-unit.rex");
+  } catch (err) {
+    invalidWatch = err?.code === "ERR001";
+  }
+  assert(invalidWatch, "watch should reject invalid duration units");
+
+  let invalidBudget = false;
+  try {
+    checkString(`${source[3]}\n`, "budget-invalid-key.rex");
+  } catch (err) {
+    invalidBudget = err?.code === "ERR001";
+  }
+  assert(invalidBudget, "budget should reject unknown constraint keys");
+}
+
 function main() {
   checkRawFindCompilation();
   checkUseInsteadFormatting();
   checkUnterminatedStringDiagnostic();
   checkContractsResolution();
   checkCompileDryRun();
+  checkExtremePrimitiveContracts();
   console.log("Compiler surface check passed.");
 }
 
